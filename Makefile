@@ -1,11 +1,20 @@
 ##
 # SCCPp 0.1
 # 
-sccpp: sccpp.c
-	$(CC) $< -o $@
+CC=gcc
+CFLAGS=-I /usr/include
+DEPS = message.h utils.h
+OBJ = sccpp.o message.o
+
+%.o: %.c
+	$(CC) $< -c -o $@ $(CFLAGS)
+
+sccpp: $(OBJ)
+	$(CC) -o $@ $^ $(CFLAGS)
 
 clean:
 	rm -f sccpp
+	rm *.o
 
 install: sccpp
 	install -d "/usr/bin"
