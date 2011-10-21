@@ -2,7 +2,7 @@
 # SCCPp 0.1
 # 
 CC=gcc
-CFLAGS=-I /usr/include
+CFLAGS=-I /usr/include -Wall
 DEPS = message.h utils.h
 OBJ = sccpp.o message.o
 

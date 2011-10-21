@@ -19,65 +19,106 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
+#include "device.h"
 #include "message.h"
 #include "sccpp.h"
 #include "utils.h"
 
-int sp_connect(char *ip, char *port)
+struct phone {
+
+	struct sccp_session *session;
+
+	char name[16];
+	uint32_t userId;
+	uint32_t instance;
+	uint32_t ip;
+	uint32_t type;
+	uint32_t maxStreams;
+	uint32_t activeStreams;
+	uint8_t protoVersion;
+};
+
+int sccp_register_message(struct phone *phone)
 {
-	struct addrinfo hints, *res;
-	int sockfd;
-	int ret; 
+	struct sccp_msg *msg = NULL;
+	int ret = 0;
+
+	msg = msg_alloc(sizeof(struct register_message), REGISTER_MESSAGE);
+	if (msg == NULL)
+		return -1;
+
+	memcpy(msg->data.reg.name, phone->name, sizeof(msg->data.reg.name));
+	msg->data.reg.userId = htolel(phone->userId);
+	msg->data.reg.instance = htolel(phone->instance);
+	msg->data.reg.ip = letohl(phone->ip);
+	msg->data.reg.type = htolel(phone->type);
+	msg->data.reg.maxStreams = htolel(phone->maxStreams);
+	msg->data.reg.protoVersion = htolel(phone->protoVersion);
+
+	ret = transmit_message(msg, phone->session);	
+	if (ret == -1)
+		return -1;
+
+	return 0;
+}
+
+struct phone *phone_new(char name[16],
+		uint32_t userId,
+		uint32_t instance,
+		uint32_t ip,
+		uint32_t type,
+		uint32_t maxStreams,
+		uint32_t activeStreams,
+		uint8_t protoVersion)
+{
+
+	struct phone *phone = NULL;
+	phone = calloc(1, sizeof(struct phone));
+
+	memcpy(phone->name, name, sizeof(phone->name));
+	phone->userId = userId;
+	phone->instance = instance;
+	phone->ip = ip;
+	phone->type = type;
+	phone->maxStreams = maxStreams;
+	phone->activeStreams = activeStreams;
+	phone->protoVersion = protoVersion;
+
+	return phone;
+}
+
+struct sccp_session *session_new(char *ip, char *port)
+{
+	struct addrinfo hints, *res = NULL;
+	struct sccp_session *session = NULL;
+	int ret = 0;
+
+	session = calloc(1, sizeof(struct sccp_session));
+	if (session == NULL)
+		return NULL;
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
 	getaddrinfo(ip, port, &hints, &res);
 
-	sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-	if (sockfd == -1)
-		return -1;
+	session->sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+	if (session->sockfd == -1) {
+		free(session);
+		return NULL;
+	}
 
-	ret = connect(sockfd, res->ai_addr, res->ai_addrlen); 
-	if (ret == -1)
-		return -1;
+	ret = connect(session->sockfd, res->ai_addr, res->ai_addrlen); 
+	if (ret == -1) {
+		free(session);
+		return NULL;
+	}
 
-	return sockfd;
+	return session;
 }
 
-int create_device_7940(char *ip, char *port)
+int handle_register_ack(struct phone *phone, struct sccp_msg *msg)
 {
-	int sockfd = 0;
-	struct sccp_msg *msg = NULL;
-	struct sccp_session session;
-	int ret = 0;
-
-	session.sockfd = sp_connect(ip, port);
-
-	msg = msg_alloc(sizeof(struct register_message), REGISTER_MESSAGE);
-	if (msg == NULL)
-		return -1;
-
-	memcpy(msg->data.reg.name, "SEP001AA289343B", sizeof(msg->data.reg.name));
-	msg->data.reg.userId = htolel(0);  
-	msg->data.reg.instance = htolel(0);
-	msg->data.reg.ip = letohl(0x0a610864);
-	msg->data.reg.type = htolel(115);
-	msg->data.reg.maxStreams = htolel(5);
-	msg->data.reg.protoVersion = htolel(0);
-
-	ret = transmit_message(msg, &session);	
-	if (ret == -1)
-		return -1;
-
-	sleep(1);
-
-	char buf[2000];
-	ret = read(session.sockfd, buf, 2000);
-	printf("got %d\n", ret);
-
-	msg = (struct sccp_msg *)buf;
-
 	printf("keepalive %d\n", letohl(msg->data.regack.keepAlive));
 	printf("dateTemplate %s\n", msg->data.regack.dateTemplate);
 	printf("secondaryKeepAlive %d\n", letohl(msg->data.regack.secondaryKeepAlive));
@@ -90,7 +131,53 @@ int create_device_7940(char *ip, char *port)
 
 	if (letohl(msg->data.regack.secondaryKeepAlive) != 33)
 		return -1;
-	
+
+	return 0;
+}
+/*
+static void *thread_session(void *data)
+{
+	struct phone *phone = data;
+	struct sccp_session *session = phone->session;
+	struct sccp_msg *msg = NULL;
+	int connected = 1;
+	int ret = 0;
+
+	while (connected) {
+
+		ret = read(session.sockfd, session->inbuf, 2000);
+		msg = (struct sccp_msg *)session->inbuf;
+
+		msg = (struct sccp_msg *)session->inbuf;
+		ret = handle_message(msg, session);
+
+	}
+
+	return NULL
+}
+*/
+
+int phone_register(struct phone *phone)
+{
+	struct sccp_msg *msg = NULL;
+	int ret = 0;
+
+	msg = msg_alloc(sizeof(struct register_message), REGISTER_MESSAGE);
+	if (msg == NULL)
+		return -1;
+
+	memcpy(msg->data.reg.name, phone->name, sizeof(msg->data.reg.name));
+	msg->data.reg.userId = htolel(phone->userId);  
+	msg->data.reg.instance = htolel(phone->instance);
+	msg->data.reg.ip = letohl(phone->ip);
+	msg->data.reg.type = htolel(phone->type);
+	msg->data.reg.maxStreams = htolel(phone->maxStreams);
+	msg->data.reg.protoVersion = htolel(phone->protoVersion);
+
+	ret = transmit_message(msg, phone->session);	
+	if (ret == -1)
+		return -1;
+
 	return 0;
 }
 
@@ -102,20 +189,23 @@ void usage()
 int main(int argc, char *argv[])
 {
 	int ret = 0;
-
-
-	if (argc < 4) {
+	
+	if (argc < 3) {
 		usage();
 		return -1;
 	}
+
 	char *ip = strdup(argv[1]);
 	char *port = strdup(argv[2]);
 
-	ret = create_device_7940(ip, port);
+	struct phone *c7940 = NULL;
+	c7940 = phone_new("SEP001AA289343B", 0, 1, 0xffffff, SCCP_DEVICE_7940, 0, 0, 0);
+	c7940->session = session_new(ip, port);
 
-//	ret = sp_connect(argv[1], argv[2]);
-
-	sleep(atoi(argv[3]));
-
+	phone_register(c7940);	
+/*
+	pthread_t thread;
+	pthread_create(&thread, NULL, thread_phone, phone);
+*/
 	return ret;
 }
