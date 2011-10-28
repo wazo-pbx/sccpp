@@ -1,8 +1,9 @@
 ##
-# SCCPp 0.1
-# 
+# sccpp 0.1
+##
+
 CC=gcc
-CFLAGS=-I /usr/include -Wall
+CFLAGS=-I /usr/include -Wall -pthread
 DEPS = message.h utils.h
 OBJ = sccpp.o message.o
 

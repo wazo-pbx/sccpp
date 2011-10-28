@@ -12,6 +12,8 @@
  * used by Asterisk testsuite
  */
 
+#include <errno.h>
+#include <poll.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -94,8 +96,10 @@ struct sccp_session *session_new(char *ip, char *port)
 	int ret = 0;
 
 	session = calloc(1, sizeof(struct sccp_session));
-	if (session == NULL)
+	if (session == NULL) {
+		fprintf(stdout, "calloc() failed\n");
 		return NULL;
+	}
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_INET;
@@ -104,12 +108,14 @@ struct sccp_session *session_new(char *ip, char *port)
 
 	session->sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 	if (session->sockfd == -1) {
+		fprintf(stdout, "socket() failed\n");
 		free(session);
 		return NULL;
 	}
 
 	ret = connect(session->sockfd, res->ai_addr, res->ai_addrlen); 
 	if (ret == -1) {
+		fprintf(stdout, "connect() failed\n");
 		free(session);
 		return NULL;
 	}
@@ -117,7 +123,7 @@ struct sccp_session *session_new(char *ip, char *port)
 	return session;
 }
 
-int handle_register_ack(struct phone *phone, struct sccp_msg *msg)
+int handle_register_ack_message(struct phone *phone, struct sccp_msg *msg)
 {
 	printf("keepalive %d\n", letohl(msg->data.regack.keepAlive));
 	printf("dateTemplate %s\n", msg->data.regack.dateTemplate);
@@ -134,28 +140,6 @@ int handle_register_ack(struct phone *phone, struct sccp_msg *msg)
 
 	return 0;
 }
-/*
-static void *thread_session(void *data)
-{
-	struct phone *phone = data;
-	struct sccp_session *session = phone->session;
-	struct sccp_msg *msg = NULL;
-	int connected = 1;
-	int ret = 0;
-
-	while (connected) {
-
-		ret = read(session.sockfd, session->inbuf, 2000);
-		msg = (struct sccp_msg *)session->inbuf;
-
-		msg = (struct sccp_msg *)session->inbuf;
-		ret = handle_message(msg, session);
-
-	}
-
-	return NULL
-}
-*/
 
 int phone_register(struct phone *phone)
 {
@@ -181,9 +165,115 @@ int phone_register(struct phone *phone)
 	return 0;
 }
 
+static int handle_message(struct sccp_msg *msg, struct sccp_session *session)
+{
+	int ret = 0;
+
+	switch (msg->id) {
+
+		case REGISTER_ACK_MESSAGE:
+			handle_register_ack_message(msg, session);
+			break;
+
+		default:
+			fprintf(stdout, "Unknown message %x\n", msg->id);
+			break;
+	}
+
+	return ret;
+}
+
+static int fetch_data(struct sccp_session *session)
+{
+        struct pollfd fds[1] = {0};
+        int nfds = 0;
+        ssize_t nbyte = 0;
+        int msg_len = 0;
+
+        fds[0].fd = session->sockfd;
+        fds[0].events = POLLIN;
+        fds[0].revents = 0;
+
+        nfds = poll(fds, 1, 5000); /* millisecond */
+        if (nfds == -1) { /* something wrong happend */
+                fprintf(stdout, "Failed to poll socket: %s\n", strerror(errno));
+                return -1;
+
+        } else if (nfds == 0) { /* the file descriptor is not ready */
+                fprintf(stdout, "Device has timed out\n");
+                return -1;
+
+        } else if (fds[0].revents & POLLERR || fds[0].revents & POLLHUP) {
+                fprintf(stdout, "Device has closed the connection\n");
+                return -1;
+
+        } else if (fds[0].revents & POLLIN || fds[0].revents & POLLPRI) {
+
+                /* fetch the field that contain the packet length */
+                nbyte = read(session->sockfd, session->inbuf, 4);
+                fprintf(stdout, "nbyte %d\n", nbyte);
+                if (nbyte < 0) { /* something wrong happend */
+                        fprintf(stdout, "Failed to read socket: %s\n", strerror(errno));
+                        return -1;
+
+                } else if (nbyte == 0) { /* EOF */
+                        fprintf(stdout, "Device has closed the connection\n");
+                        return -1;
+
+                } else if (nbyte < 4) {
+                        fprintf(stdout, "Client sent less data than expected. Expected at least 4 bytes but got %d\n", nbyte);
+                        return -1;
+		}
+
+                msg_len = letohl(*((int *)session->inbuf));
+                fprintf(stdout, "msg_len %d\n", msg_len);
+                if (msg_len > SCCP_MAX_PACKET_SZ || msg_len < 0) {
+                        fprintf(stdout, "Packet length is out of bounds: 0 > %d > %d\n", msg_len, SCCP_MAX_PACKET_SZ);
+                        return -1;
+                }
+
+                /* bypass the length field and fetch the payload */
+                nbyte = read(session->sockfd, session->inbuf+4, msg_len+4);
+                fprintf(stdout, "nbyte %d\n", nbyte);
+                if (nbyte < 0) {
+			fprintf(stdout, "Failed to read socket: %s\n", strerror(errno));
+                        return -1;
+
+                } else if (nbyte == 0) { /* EOF */
+                        fprintf(stdout, "Device has closed the connection\n");
+                        return -1;
+                }
+
+                return nbyte;
+        }
+
+        return -1;
+}
+
+void *thread_phone(void *data)
+{
+	struct phone *phone = data;
+	struct sccp_msg *msg = NULL;
+	int connected = 1;
+	int ret = 0;
+
+	while (connected) {
+
+		ret = fetch_data(phone->session);
+		if (ret > 0) {
+			msg = (struct sccp_msg *)phone->session->inbuf;
+			ret = handle_message(msg, phone->session);
+		}
+
+		if (ret == -1) {
+			connected = 0;
+		}
+	}
+}
+
 void usage()
 {
-	printf("Usage: sccpp <Ip> <Port> <SleepTime>\n");
+	printf("Usage: sccpp <Ip> <Port>\n");
 }
 
 int main(int argc, char *argv[])
@@ -202,10 +292,16 @@ int main(int argc, char *argv[])
 	c7940 = phone_new("SEP001AA289343B", 0, 1, 0xffffff, SCCP_DEVICE_7940, 0, 0, 0);
 	c7940->session = session_new(ip, port);
 
+	if (c7940->session == NULL) {
+		fprintf(stdout, "can't create a new session\n");
+		return -1;
+	}
+
 	phone_register(c7940);	
-/*
+
 	pthread_t thread;
-	pthread_create(&thread, NULL, thread_phone, phone);
-*/
+	pthread_create(&thread, NULL, thread_phone, c7940);
+	pthread_join(thread, NULL);
+
 	return ret;
 }
