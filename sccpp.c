@@ -127,8 +127,91 @@ struct sccp_session *session_new(char *ip, char *port)
 	return session;
 }
 
+int transmit_offhook_message(struct phone *phone)
+{
+	int ret = 0;
+	struct sccp_msg *msg;
+
+	msg = msg_alloc(sizeof(struct offhook_message), OFFHOOK_MESSAGE);
+	if (msg == NULL)
+		return -1;
+
+	ret = transmit_message(msg, phone->session);
+	if (ret == -1)
+		return -1;
+
+	return 0;
+}
+
+int transmit_line_status_req_message(struct phone *phone)
+{
+	int ret = 0;
+	struct sccp_msg *msg;
+
+	msg = msg_alloc(sizeof(struct line_status_req_message), LINE_STATUS_REQ_MESSAGE);
+	if (msg == NULL)
+		return -1;
+
+	msg->data.line.lineNumber = htolel(1);
+
+	ret = transmit_message(msg, phone->session);
+	if (ret == -1)
+		return -1;
+
+	return 0;
+}
+
+int transmit_softkey_set_req_message(struct phone *phone)
+{
+	int ret = 0;
+	struct sccp_msg *msg;
+
+	msg = msg_alloc(0, SOFTKEY_SET_REQ_MESSAGE);
+	if (msg == NULL)
+		return -1;
+
+	ret = transmit_message(msg, phone->session);
+	if (ret == -1)
+		return -1;
+
+	return 0;
+}
+
+int transmit_softkey_template_req_message(struct phone *phone)
+{
+	int ret = 0;
+	struct sccp_msg *msg;
+
+	msg = msg_alloc(0, SOFTKEY_TEMPLATE_REQ_MESSAGE);
+	if (msg == NULL)
+		return -1;
+
+	ret = transmit_message(msg, phone->session);
+	if (ret == -1)
+		return -1;
+
+	return 0;
+}
+
+int transmit_button_template_req_message(struct phone *phone)
+{
+	int ret = 0;
+	struct sccp_msg *msg;
+
+	msg = msg_alloc(0, BUTTON_TEMPLATE_REQ_MESSAGE);
+	if (msg == NULL)
+		return -1;
+
+	ret = transmit_message(msg, phone->session);
+	if (ret == -1)
+		return -1;
+
+	return 0;
+}
+
 int handle_register_ack_message(struct sccp_msg *msg, struct phone *phone)
 {
+	fprintf(stdout, "%s\n", __func__);
 	phone->keepAlive = letohl(msg->data.regack.keepAlive);
 	phone->dateTemplate = strdup(msg->data.regack.dateTemplate);
 	phone->secondaryKeepAlive = letohl(msg->data.regack.secondaryKeepAlive);
@@ -136,8 +219,44 @@ int handle_register_ack_message(struct sccp_msg *msg, struct phone *phone)
 	return 0;
 }
 
+int handle_forward_status_res_message(struct sccp_msg *msg, struct phone *phone)
+{
+	fprintf(stdout, "%s\n", __func__);
+}
+
+int handle_line_status_res_message(struct sccp_msg *msg, struct phone *phone)
+{
+	fprintf(stdout, "%s\n", __func__);
+}
+
+int handle_select_soft_keys_message(struct sccp_msg *msg, struct phone *phone)
+{
+	fprintf(stdout, "%s\n", __func__);
+}
+
+int handle_softkey_set_res_message(struct sccp_msg *msg, struct phone *phone)
+{
+	fprintf(stdout, "%s\n", __func__);
+	transmit_line_status_req_message(phone);
+}
+
+int handle_softkey_template_res_message(struct sccp_msg *msg, struct phone *phone)
+{
+	fprintf(stdout, "%s\n", __func__);
+	transmit_softkey_set_req_message(phone);
+}
+
+int handle_button_template_res_message(struct sccp_msg *msg, struct phone *phone)
+{
+	fprintf(stdout, "%s\n", __func__);
+	transmit_softkey_template_req_message(phone);
+
+	return 0;
+}
+
 int handle_capabilities_req_message(struct sccp_msg *msg, struct phone *phone)
 {
+	fprintf(stdout, "%s\n", __func__);
 	int ret = 0;
 
 	msg = msg_alloc(sizeof(struct capabilities_res_message), CAPABILITIES_RES_MESSAGE);
@@ -146,33 +265,43 @@ int handle_capabilities_req_message(struct sccp_msg *msg, struct phone *phone)
 
 	msg->data.caps.count = htolel(8);
 
+	/* Wideband 256k */
 	msg->data.caps.caps[0].codec = htolel(25);
 	msg->data.caps.caps[0].frames = htolel(120);
 
+	/* G.711 u-law 64k */
 	msg->data.caps.caps[1].codec = htolel(4);
 	msg->data.caps.caps[1].frames = htolel(40);
 
+	/* G7.11 A-law 64k */
 	msg->data.caps.caps[2].codec = htolel(2);
 	msg->data.caps.caps[2].frames = htolel(40);
 
+	/* G.729 Annex B */
 	msg->data.caps.caps[3].codec = htolel(15);
 	msg->data.caps.caps[3].frames = htolel(60);
 
+	/* G.729 Annex A+Annex B */
 	msg->data.caps.caps[4].codec = htolel(16);
 	msg->data.caps.caps[4].frames = htolel(60);
 
+	/* G.729 */
 	msg->data.caps.caps[5].codec = htolel(11);
 	msg->data.caps.caps[5].frames = htolel(60);
 
+	/* G.729 Annex A */
 	msg->data.caps.caps[6].codec = htolel(12);
 	msg->data.caps.caps[6].frames = htolel(60);
 
+	/* RFC2833_DynPayload */
 	msg->data.caps.caps[7].codec = htolel(257);
 	msg->data.caps.caps[7].frames = htolel(4);
 
 	ret = transmit_message(msg, phone->session);
 	if (ret == -1)
 		return -1;
+
+	transmit_button_template_req_message(phone);
 
 	return 0;
 }
@@ -207,12 +336,32 @@ static int handle_message(struct sccp_msg *msg, struct phone *phone)
 
 	switch (msg->id) {
 
-		case REGISTER_ACK_MESSAGE:
-			handle_register_ack_message(msg, phone);
-			break;
-
 		case CAPABILITIES_REQ_MESSAGE:
 			handle_capabilities_req_message(msg, phone);
+			break;
+
+		case BUTTON_TEMPLATE_RES_MESSAGE:
+			handle_button_template_res_message(msg, phone);
+			break;
+
+		case SOFTKEY_TEMPLATE_RES_MESSAGE:
+			handle_softkey_template_res_message(msg, phone);
+			break;
+
+		case SOFTKEY_SET_RES_MESSAGE:
+			handle_softkey_set_res_message(msg, phone);
+			break;
+
+		case SELECT_SOFT_KEYS_MESSAGE:
+			handle_select_soft_keys_message(msg, phone);
+			break;
+
+		case LINE_STATUS_RES_MESSAGE:
+			handle_line_status_res_message(msg, phone);
+			break;
+
+		case FORWARD_STATUS_RES_MESSAGE:
+			handle_forward_status_res_message(msg, phone);
 			break;
 
 		default:
@@ -234,7 +383,7 @@ static int fetch_data(struct sccp_session *session)
         fds[0].events = POLLIN;
         fds[0].revents = 0;
 
-        nfds = poll(fds, 1, 5000); /* millisecond */
+        nfds = poll(fds, 1, -1); /* millisecond */
         if (nfds == -1) { /* something wrong happend */
                 fprintf(stdout, "Failed to poll socket: %s\n", strerror(errno));
                 return -1;
@@ -337,10 +486,11 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	phone_register(c7940);	
-
+	phone_register(c7940);
 	pthread_t thread;
 	pthread_create(&thread, NULL, thread_phone, c7940);
+	sleep(1);
+	transmit_offhook_message(c7940);
 	pthread_join(thread, NULL);
 
 	return ret;

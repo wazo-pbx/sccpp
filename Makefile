@@ -3,7 +3,7 @@
 ##
 
 CC=gcc
-CFLAGS=-I /usr/include -Wall -pthread
+CFLAGS=-I /usr/include -Wall -g -pthread
 DEPS = message.h utils.h
 OBJ = sccpp.o message.o
 
