@@ -38,6 +38,10 @@ struct phone {
 	uint32_t maxStreams;
 	uint32_t activeStreams;
 	uint8_t protoVersion;
+
+	uint32_t keepAlive;
+	char *dateTemplate;
+	uint32_t secondaryKeepAlive;
 };
 
 int sccp_register_message(struct phone *phone)
@@ -123,19 +127,51 @@ struct sccp_session *session_new(char *ip, char *port)
 	return session;
 }
 
-int handle_register_ack_message(struct phone *phone, struct sccp_msg *msg)
+int handle_register_ack_message(struct sccp_msg *msg, struct phone *phone)
 {
-	printf("keepalive %d\n", letohl(msg->data.regack.keepAlive));
-	printf("dateTemplate %s\n", msg->data.regack.dateTemplate);
-	printf("secondaryKeepAlive %d\n", letohl(msg->data.regack.secondaryKeepAlive));
+	phone->keepAlive = letohl(msg->data.regack.keepAlive);
+	phone->dateTemplate = strdup(msg->data.regack.dateTemplate);
+	phone->secondaryKeepAlive = letohl(msg->data.regack.secondaryKeepAlive);
 
-	if (letohl(msg->data.regack.keepAlive) != 33)
+	return 0;
+}
+
+int handle_capabilities_req_message(struct sccp_msg *msg, struct phone *phone)
+{
+	int ret = 0;
+
+	msg = msg_alloc(sizeof(struct capabilities_res_message), CAPABILITIES_RES_MESSAGE);
+	if (msg == NULL)
 		return -1;
 
-	if (!strcmp(msg->data.regack.dateTemplate, "D.M.Y"))
-		return -1;
+	msg->data.caps.count = htolel(8);
 
-	if (letohl(msg->data.regack.secondaryKeepAlive) != 33)
+	msg->data.caps.caps[0].codec = htolel(25);
+	msg->data.caps.caps[0].frames = htolel(120);
+
+	msg->data.caps.caps[1].codec = htolel(4);
+	msg->data.caps.caps[1].frames = htolel(40);
+
+	msg->data.caps.caps[2].codec = htolel(2);
+	msg->data.caps.caps[2].frames = htolel(40);
+
+	msg->data.caps.caps[3].codec = htolel(15);
+	msg->data.caps.caps[3].frames = htolel(60);
+
+	msg->data.caps.caps[4].codec = htolel(16);
+	msg->data.caps.caps[4].frames = htolel(60);
+
+	msg->data.caps.caps[5].codec = htolel(11);
+	msg->data.caps.caps[5].frames = htolel(60);
+
+	msg->data.caps.caps[6].codec = htolel(12);
+	msg->data.caps.caps[6].frames = htolel(60);
+
+	msg->data.caps.caps[7].codec = htolel(257);
+	msg->data.caps.caps[7].frames = htolel(4);
+
+	ret = transmit_message(msg, phone->session);
+	if (ret == -1)
 		return -1;
 
 	return 0;
@@ -165,14 +201,18 @@ int phone_register(struct phone *phone)
 	return 0;
 }
 
-static int handle_message(struct sccp_msg *msg, struct sccp_session *session)
+static int handle_message(struct sccp_msg *msg, struct phone *phone)
 {
 	int ret = 0;
 
 	switch (msg->id) {
 
 		case REGISTER_ACK_MESSAGE:
-			handle_register_ack_message(msg, session);
+			handle_register_ack_message(msg, phone);
+			break;
+
+		case CAPABILITIES_REQ_MESSAGE:
+			handle_capabilities_req_message(msg, phone);
 			break;
 
 		default:
@@ -262,7 +302,7 @@ void *thread_phone(void *data)
 		ret = fetch_data(phone->session);
 		if (ret > 0) {
 			msg = (struct sccp_msg *)phone->session->inbuf;
-			ret = handle_message(msg, phone->session);
+			ret = handle_message(msg, phone);
 		}
 
 		if (ret == -1) {
