@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+struct sccp_msg *msg_alloc(size_t data_length, int message_id);
+
 /*********************
  * Protocol Messages *
  *********************/
@@ -27,6 +29,13 @@ struct register_message {
 #define IP_PORT_MESSAGE 0x0002
 struct ip_port_message {
 	uint32_t stationIpPort;
+};
+
+#define KEYPAD_BUTTON_MESSAGE 0x0003
+struct keypad_button_message {
+	uint32_t button;
+	uint32_t instance;
+	uint32_t callId;
 };
 
 #define OFFHOOK_MESSAGE 0x0006
@@ -79,9 +88,28 @@ struct alarm_message {
 	uint32_t alarmParam2;
 };
 
+#define OPEN_RECEIVE_CHANNEL_ACK_MESSAGE 0x0022
+struct open_receive_channel_ack_message {
+	uint32_t status;
+	uint32_t ipAddr;
+	uint32_t port;
+	uint32_t passThruId;
+};
+
+struct open_receive_channel_ack_message_v17 {
+	uint32_t status;
+	uint32_t unknown1;
+	uint32_t ipAddr[4];
+	uint32_t port;
+	uint32_t passThruId;
+	uint32_t space[4];
+	uint32_t callId;
+};
+
 #define SOFTKEY_SET_REQ_MESSAGE 0x0025
 #define SOFTKEY_TEMPLATE_REQ_MESSAGE 0x0028
 #define REGISTER_AVAILABLE_LINES_MESSAGE 0x002D
+#define ACCESSORY_STATUS_MESSAGE 0x0049
 #define REGISTER_ACK_MESSAGE 0x0081
 struct register_ack_message {
         uint32_t keepAlive;
@@ -121,6 +149,76 @@ struct set_lamp_message {
 	uint32_t stimulus;
 	uint32_t stimulusInstance;
 	uint32_t deviceStimulus;
+};
+
+#define STOP_MEDIA_TRANSMISSION_MESSAGE 0x008B
+struct stop_media_transmission_message {
+	uint32_t conferenceId;
+	uint32_t partyId;
+	uint32_t conferenceId1;
+	uint32_t unknown1;
+};
+
+#define START_MEDIA_TRANSMISSION_MESSAGE 0x008A
+struct media_qualifier {
+	uint32_t precedence;
+	uint32_t vad;
+	uint16_t packets;
+	uint32_t bitRate;
+};
+
+struct start_media_transmission_message {
+	uint32_t conferenceId;
+	uint32_t passThruPartyId;
+	uint32_t remoteIp;
+	uint32_t remotePort;
+	uint32_t packetSize;
+	uint32_t payloadType;
+	struct media_qualifier qualifier;
+	uint32_t conferenceId1;
+	uint32_t space[14];
+	uint32_t rtpDtmfPayload;
+	uint32_t rtpTimeout;
+	uint32_t mixingMode;
+	uint32_t mixingParty;
+};
+
+struct start_media_transmission_message_v17 {
+	uint32_t conferenceId;
+	uint32_t passThruPartyId;
+	uint32_t remoteIp[4];
+	uint32_t remotePort;
+	uint32_t packetSize;
+	uint32_t payloadType;
+	struct media_qualifier qualifier;
+	uint32_t conferenceId1;
+	uint32_t space[14];
+	uint32_t rtpDtmfPayload;
+	uint32_t rtpTimeout;
+	uint32_t mixingMode;
+	uint32_t mixingParty;
+};
+
+#define CALL_INFO_MESSAGE 0x008F
+struct call_info_message {
+	char callingPartyName[40];
+	char callingParty[24];
+	char calledPartyName[40];
+	char calledParty[24];
+	uint32_t instance;
+	uint32_t reference;
+	uint32_t type;
+	char originalCalledPartyName[40];
+	char originalCalledParty[24];
+	char lastRedirectingPartyName[40];
+	char lastRedirectingParty[24];
+	uint32_t originalCalledPartyRedirectReason;
+	uint32_t lastRedirectingReason;
+	char callingPartyVoiceMailbox[24];
+	char calledPartyVoiceMailbox[24];
+	char originalCalledPartyVoiceMailbox[24];
+	char lastRedirectingVoiceMailbox[24];
+	uint32_t space[3];
 };
 
 #define FORWARD_STATUS_RES_MESSAGE 0x0090
@@ -189,6 +287,83 @@ struct register_rej_message {
 
 #define KEEP_ALIVE_ACK_MESSAGE 0x0100
 
+#define OPEN_RECEIVE_CHANNEL_MESSAGE 0x0105
+struct open_receive_channel_message {
+	uint32_t conferenceId;
+	uint32_t partyId;
+	uint32_t packets;
+	uint32_t capability;
+	uint32_t echo;
+	uint32_t bitrate;
+
+	uint32_t conferenceId1;
+
+	uint32_t unknown1;
+	uint32_t unknown2;
+	uint32_t unknown3;
+	uint32_t unknown4;
+	uint32_t unknown5;
+	uint32_t unknown6;
+	uint32_t unknown7;
+	uint32_t unknown8;
+	uint32_t unknown9;
+	uint32_t unknown10;
+
+	uint32_t unknown11;
+	uint32_t unknown12;
+	uint32_t unknown13;
+	uint32_t unknown14;
+	uint32_t rtpDtmfPayload;
+	uint32_t rtpTimeout;
+
+	uint32_t mixingMode;
+	uint32_t mixingParty;
+	char IpAddr[16];
+	uint32_t unknown17;
+};
+
+struct open_receive_channel_message_v17 {
+
+	uint32_t conferenceId;
+	uint32_t partyId;
+	uint32_t packets;
+	uint32_t capability;
+	uint32_t echo;
+	uint32_t bitrate;
+	
+	uint32_t conferenceId1;
+	uint32_t unknowna1;
+	uint32_t unknowna2;
+	uint32_t unknowna3;
+	uint32_t unknowna4;
+	uint32_t unknowna5;
+	uint32_t unknowna6;
+	uint32_t unknowna7;
+	uint32_t unknowna8;
+	uint32_t unknowna9;
+	uint32_t unknown10;
+	uint32_t unknown11;
+	uint32_t unknown12;
+	uint32_t unknown13;
+	uint32_t unknown14;
+
+	uint32_t rtpDtmfPayload;
+	uint32_t rtpTimeout;
+	uint32_t mixingMode;
+	uint32_t mixingParty;
+	uint32_t unknown1;
+	char remoteIpAddr[16];
+	uint32_t unknown2;
+	uint32_t unknown3;
+};
+
+#define CLOSE_RECEIVE_CHANNEL_MESSAGE 0x0106
+struct close_receive_channel_message {
+	uint32_t conferenceId;
+	uint32_t partyId;
+	uint32_t conferenceId1;
+};
+
 #define SELECT_SOFT_KEYS_MESSAGE 0x0110
 struct select_soft_keys_message {
         uint32_t instance;
@@ -202,7 +377,9 @@ struct call_state_message {
 	uint32_t callState;
 	uint32_t lineInstance;
 	uint32_t callReference;
-	uint32_t space[3];
+	uint32_t visibility;
+	uint32_t priority;
+	uint32_t unknown;
 };
 
 #define SOFTKEY_TEMPLATE_RES_MESSAGE 0x0108
@@ -216,6 +393,8 @@ struct softkey_set_definition {
         uint8_t softKeyTemplateIndex[16];
         uint16_t softKeyInfoIndex[16];
 };
+
+#define START_MEDIA_TRANSMISSION_ACK_MESSAGE 0x0159
 
 struct softkey_set_res_message {
         uint32_t softKeySetOffset;
@@ -250,9 +429,19 @@ union sccp_data {
 	struct set_lamp_message setlamp;
 	struct set_ringer_message setringer;
 	struct call_state_message callstate;
+	struct keypad_button_message keypad;
         struct softkey_set_res_message softkeysets;
 	struct softkey_template_res_message softkeytemplate;
         struct select_soft_keys_message selectsoftkey;
+	struct stop_media_transmission_message stopmedia;
+	struct start_media_transmission_message startmedia;
+	struct start_media_transmission_message_v17 startmedia_v17;
+	struct call_info_message callinfo;
+	struct close_receive_channel_message closereceivechannel;
+	struct open_receive_channel_message openreceivechannel;
+	struct open_receive_channel_message_v17 openreceivechannel_v17;
+	struct open_receive_channel_ack_message openreceivechannelack;
+	struct open_receive_channel_ack_message_v17 openreceivechannelack_v17;
 };
 
 /* message composition */
@@ -262,7 +451,5 @@ struct sccp_msg {
 	uint32_t id;
 	union sccp_data data;
 };
-
-struct sccp_msg *msg_alloc(size_t data_length, int message_id);
 
 #endif /* SCCP_MESSAGE_H */

@@ -127,6 +127,26 @@ struct sccp_session *session_new(char *ip, char *port)
 	return session;
 }
 
+int transmit_keypad_button_message(struct phone *phone, uint32_t dtmf)
+{
+	int ret = 0;
+	struct sccp_msg *msg;
+
+	msg = msg_alloc(sizeof(struct keypad_button_message), KEYPAD_BUTTON_MESSAGE);
+	if (msg == NULL)
+		return -1;
+
+	msg->data.keypad.button = htolel(dtmf);
+	msg->data.keypad.instance = htolel(1);
+	msg->data.keypad.callId = htolel(0);
+
+	ret = transmit_message(msg, phone->session);
+	if (ret == -1)
+		return -1;
+
+	return 0;
+}
+
 int transmit_offhook_message(struct phone *phone)
 {
 	int ret = 0;
@@ -491,6 +511,9 @@ int main(int argc, char *argv[])
 	pthread_create(&thread, NULL, thread_phone, c7940);
 	sleep(1);
 	transmit_offhook_message(c7940);
+	transmit_keypad_button_message(c7940, 2);
+	transmit_keypad_button_message(c7940, 0);
+	transmit_keypad_button_message(c7940, 3);
 	pthread_join(thread, NULL);
 
 	return ret;
