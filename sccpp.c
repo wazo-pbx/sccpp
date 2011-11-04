@@ -14,8 +14,10 @@
 
 #include <errno.h>
 #include <poll.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -242,35 +244,36 @@ int handle_register_ack_message(struct sccp_msg *msg, struct phone *phone)
 int handle_forward_status_res_message(struct sccp_msg *msg, struct phone *phone)
 {
 	fprintf(stdout, "%s\n", __func__);
+	return 0;
 }
 
 int handle_line_status_res_message(struct sccp_msg *msg, struct phone *phone)
 {
 	fprintf(stdout, "%s\n", __func__);
+	return 0;
 }
 
 int handle_select_soft_keys_message(struct sccp_msg *msg, struct phone *phone)
 {
 	fprintf(stdout, "%s\n", __func__);
+	return 0;
 }
 
 int handle_softkey_set_res_message(struct sccp_msg *msg, struct phone *phone)
 {
 	fprintf(stdout, "%s\n", __func__);
-	transmit_line_status_req_message(phone);
+	return 0;
 }
 
 int handle_softkey_template_res_message(struct sccp_msg *msg, struct phone *phone)
 {
 	fprintf(stdout, "%s\n", __func__);
-	transmit_softkey_set_req_message(phone);
+	return 0;
 }
 
 int handle_button_template_res_message(struct sccp_msg *msg, struct phone *phone)
 {
 	fprintf(stdout, "%s\n", __func__);
-	transmit_softkey_template_req_message(phone);
-
 	return 0;
 }
 
@@ -321,8 +324,6 @@ int handle_capabilities_req_message(struct sccp_msg *msg, struct phone *phone)
 	if (ret == -1)
 		return -1;
 
-	transmit_button_template_req_message(phone);
-
 	return 0;
 }
 
@@ -356,20 +357,28 @@ static int handle_message(struct sccp_msg *msg, struct phone *phone)
 
 	switch (msg->id) {
 
+		case REGISTER_ACK_MESSAGE:
+			handle_register_ack_message(msg, phone);
+			break;
+
 		case CAPABILITIES_REQ_MESSAGE:
 			handle_capabilities_req_message(msg, phone);
+			transmit_button_template_req_message(phone);
 			break;
 
 		case BUTTON_TEMPLATE_RES_MESSAGE:
 			handle_button_template_res_message(msg, phone);
+			transmit_softkey_template_req_message(phone);
 			break;
 
 		case SOFTKEY_TEMPLATE_RES_MESSAGE:
 			handle_softkey_template_res_message(msg, phone);
+			transmit_softkey_set_req_message(phone);
 			break;
 
 		case SOFTKEY_SET_RES_MESSAGE:
 			handle_softkey_set_res_message(msg, phone);
+			transmit_line_status_req_message(phone);
 			break;
 
 		case SELECT_SOFT_KEYS_MESSAGE:
@@ -394,7 +403,7 @@ static int handle_message(struct sccp_msg *msg, struct phone *phone)
 
 static int fetch_data(struct sccp_session *session)
 {
-        struct pollfd fds[1] = {0};
+        struct pollfd fds[1] = {{0}};
         int nfds = 0;
         ssize_t nbyte = 0;
         int msg_len = 0;
@@ -420,7 +429,6 @@ static int fetch_data(struct sccp_session *session)
 
                 /* fetch the field that contain the packet length */
                 nbyte = read(session->sockfd, session->inbuf, 4);
-                fprintf(stdout, "nbyte %d\n", nbyte);
                 if (nbyte < 0) { /* something wrong happend */
                         fprintf(stdout, "Failed to read socket: %s\n", strerror(errno));
                         return -1;
@@ -435,7 +443,6 @@ static int fetch_data(struct sccp_session *session)
 		}
 
                 msg_len = letohl(*((int *)session->inbuf));
-                fprintf(stdout, "msg_len %d\n", msg_len);
                 if (msg_len > SCCP_MAX_PACKET_SZ || msg_len < 0) {
                         fprintf(stdout, "Packet length is out of bounds: 0 > %d > %d\n", msg_len, SCCP_MAX_PACKET_SZ);
                         return -1;
@@ -443,7 +450,6 @@ static int fetch_data(struct sccp_session *session)
 
                 /* bypass the length field and fetch the payload */
                 nbyte = read(session->sockfd, session->inbuf+4, msg_len+4);
-                fprintf(stdout, "nbyte %d\n", nbyte);
                 if (nbyte < 0) {
 			fprintf(stdout, "Failed to read socket: %s\n", strerror(errno));
                         return -1;
@@ -478,6 +484,8 @@ void *thread_phone(void *data)
 			connected = 0;
 		}
 	}
+
+	return NULL;
 }
 
 void usage()
@@ -509,11 +517,13 @@ int main(int argc, char *argv[])
 	phone_register(c7940);
 	pthread_t thread;
 	pthread_create(&thread, NULL, thread_phone, c7940);
+
 	sleep(1);
 	transmit_offhook_message(c7940);
 	transmit_keypad_button_message(c7940, 2);
 	transmit_keypad_button_message(c7940, 0);
 	transmit_keypad_button_message(c7940, 3);
+
 	pthread_join(thread, NULL);
 
 	return ret;

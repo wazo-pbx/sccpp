@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include "sccpp.h"
+
 struct sccp_msg *msg_alloc(size_t data_length, int message_id);
 
 /*********************
@@ -451,5 +453,7 @@ struct sccp_msg {
 	uint32_t id;
 	union sccp_data data;
 };
+
+int transmit_message(struct sccp_msg *msg, struct sccp_session *session);
 
 #endif /* SCCP_MESSAGE_H */
