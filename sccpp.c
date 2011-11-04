@@ -149,12 +149,60 @@ int transmit_keypad_button_message(struct phone *phone, uint32_t dtmf)
 	return 0;
 }
 
+int transmit_onhook_message(struct phone *phone)
+{
+	int ret = 0;
+	struct sccp_msg *msg;
+
+	msg = msg_alloc(sizeof(struct onhook_message), ONHOOK_MESSAGE);
+	if (msg == NULL)
+		return -1;
+
+	ret = transmit_message(msg, phone->session);
+	if (ret == -1)
+		return -1;
+
+	return 0;
+}
+
 int transmit_offhook_message(struct phone *phone)
 {
 	int ret = 0;
 	struct sccp_msg *msg;
 
 	msg = msg_alloc(sizeof(struct offhook_message), OFFHOOK_MESSAGE);
+	if (msg == NULL)
+		return -1;
+
+	ret = transmit_message(msg, phone->session);
+	if (ret == -1)
+		return -1;
+
+	return 0;
+}
+
+int transmit_time_date_req_message(struct phone *phone)
+{
+	int ret = 0;
+	struct sccp_msg *msg;
+
+	msg = msg_alloc(0, TIME_DATE_REQ_MESSAGE);
+	if (msg == NULL)
+		return -1;
+
+	ret = transmit_message(msg, phone->session);
+	if (ret == -1)
+		return -1;
+
+	return 0;
+}
+
+int transmit_register_available_lines_message(struct phone *phone)
+{
+	int ret = 0;
+	struct sccp_msg *msg;
+
+	msg = msg_alloc(0, REGISTER_AVAILABLE_LINES_MESSAGE);
 	if (msg == NULL)
 		return -1;
 
@@ -242,6 +290,42 @@ int handle_register_ack_message(struct sccp_msg *msg, struct phone *phone)
 }
 
 int handle_forward_status_res_message(struct sccp_msg *msg, struct phone *phone)
+{
+	fprintf(stdout, "%s\n", __func__);
+	return 0;
+}
+
+int handle_date_time_res_message(struct sccp_msg *msg, struct phone *phone)
+{
+	fprintf(stdout, "%s\n", __func__);
+	return 0;
+}
+
+int handle_stop_media_transmission_message(struct sccp_msg *msg, struct phone *phone)
+{
+	fprintf(stdout, "%s\n", __func__);
+	return 0;
+}
+
+int handle_close_receive_channel_message(struct sccp_msg *msg, struct phone *phone)
+{
+	fprintf(stdout, "%s\n", __func__);
+	return 0;
+}
+
+int handle_call_state_message(struct sccp_msg *msg, struct phone *phone)
+{
+	fprintf(stdout, "%s\n", __func__);
+	return 0;
+}
+
+int handle_start_tone_message(struct sccp_msg *msg, struct phone *phone)
+{
+	fprintf(stdout, "%s\n", __func__);
+	return 0;
+}
+
+int handle_set_lamp_message(struct sccp_msg *msg, struct phone *phone)
 {
 	fprintf(stdout, "%s\n", __func__);
 	return 0;
@@ -391,6 +475,32 @@ static int handle_message(struct sccp_msg *msg, struct phone *phone)
 
 		case FORWARD_STATUS_RES_MESSAGE:
 			handle_forward_status_res_message(msg, phone);
+			transmit_register_available_lines_message(phone);
+			transmit_time_date_req_message(phone);
+			break;
+
+		case DATE_TIME_RES_MESSAGE:
+			handle_date_time_res_message(msg, phone);
+			break;
+
+		case SET_LAMP_MESSAGE:
+			handle_set_lamp_message(msg, phone);
+			break;
+
+		case START_TONE_MESSAGE:
+			handle_start_tone_message(msg, phone);
+			break;
+
+		case CALL_STATE_MESSAGE:
+			handle_call_state_message(msg, phone);
+			break;
+
+		case CLOSE_RECEIVE_CHANNEL_MESSAGE:
+			handle_close_receive_channel_message(msg, phone);
+			break;
+
+		case STOP_MEDIA_TRANSMISSION_MESSAGE:
+			handle_stop_media_transmission_message(msg, phone);
 			break;
 
 		default:
@@ -519,11 +629,15 @@ int main(int argc, char *argv[])
 	pthread_create(&thread, NULL, thread_phone, c7940);
 
 	sleep(1);
-	transmit_offhook_message(c7940);
+	while(1) {
+		transmit_offhook_message(c7940);
+		transmit_onhook_message(c7940);
+	}
+/*
 	transmit_keypad_button_message(c7940, 2);
 	transmit_keypad_button_message(c7940, 0);
 	transmit_keypad_button_message(c7940, 3);
-
+*/
 	pthread_join(thread, NULL);
 
 	return ret;
