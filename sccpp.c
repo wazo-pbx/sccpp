@@ -598,10 +598,63 @@ void *thread_phone(void *data)
 	return NULL;
 }
 
+void *thread_call(void *data)
+{
+
+	struct phone *phone = data;
+
+	srand(time(NULL));
+
+	while (1) {
+
+		transmit_offhook_message(phone);
+		transmit_keypad_button_message(phone, 2);
+		transmit_keypad_button_message(phone, 0);
+		transmit_keypad_button_message(phone, 0);
+		sleep(2);// rand() % 3 + 1);
+		transmit_onhook_message(phone);
+
+		transmit_offhook_message(phone);
+		transmit_keypad_button_message(phone, 2);
+		transmit_keypad_button_message(phone, 0);
+		transmit_keypad_button_message(phone, 3);
+		sleep(2);// rand() % 3 + 1);
+		transmit_onhook_message(phone);
+
+	}
+}
+
+void *thread_call2(void *data)
+{
+
+	struct phone *phone = data;
+
+	srand(time(NULL));
+
+	while (1) {
+
+		transmit_offhook_message(phone);
+		transmit_keypad_button_message(phone, 1);
+		transmit_keypad_button_message(phone, 0);
+		transmit_keypad_button_message(phone, 3);
+		sleep(1);// rand() % 3 + 1);
+		transmit_onhook_message(phone);
+
+		transmit_offhook_message(phone);
+		transmit_keypad_button_message(phone, 1);
+		transmit_keypad_button_message(phone, 0);
+		transmit_keypad_button_message(phone, 1);
+		sleep(1);// rand() % 3 + 1);
+		transmit_onhook_message(phone);
+
+	}
+}
+
 void usage()
 {
 	printf("Usage: sccpp <Ip> <Port>\n");
 }
+
 
 int main(int argc, char *argv[])
 {
@@ -615,8 +668,9 @@ int main(int argc, char *argv[])
 	char *ip = strdup(argv[1]);
 	char *port = strdup(argv[2]);
 
+/* PHONE 1 */
 	struct phone *c7940 = NULL;
-	c7940 = phone_new("SEP001AA289343B", 0, 1, 0xffffff, SCCP_DEVICE_7940, 0, 0, 0);
+	c7940 = phone_new("SEP001AA289341A", 0, 1, 0xffffff, SCCP_DEVICE_7940, 0, 0, 0);
 	c7940->session = session_new(ip, port);
 
 	if (c7940->session == NULL) {
@@ -628,17 +682,26 @@ int main(int argc, char *argv[])
 	pthread_t thread;
 	pthread_create(&thread, NULL, thread_phone, c7940);
 
-	sleep(1);
-	while(1) {
-		transmit_offhook_message(c7940);
-		transmit_onhook_message(c7940);
+/* PHONE 2 */
+	struct phone *d7940 = NULL;
+	d7940 = phone_new("SEP001AA289341B", 0, 1, 0xffffff, SCCP_DEVICE_7940, 0, 0, 0);
+	d7940->session = session_new(ip, port);
+
+	if (d7940->session == NULL) {
+		fprintf(stdout, "can't create a new session\n");
+		return -1;
 	}
-/*
-	transmit_keypad_button_message(c7940, 2);
-	transmit_keypad_button_message(c7940, 0);
-	transmit_keypad_button_message(c7940, 3);
-*/
+
+	phone_register(d7940);
+	pthread_t thread2, thread3;
+	pthread_create(&thread2, NULL, thread_phone, d7940);
+/********/
+
+	pthread_create(&thread3, NULL, thread_call, c7940);
+	pthread_create(&thread3, NULL, thread_call2, d7940);
+
 	pthread_join(thread, NULL);
+	pthread_join(thread2, NULL);
 
 	return ret;
 }
