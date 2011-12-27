@@ -16,6 +16,7 @@
 #include <poll.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -112,6 +113,8 @@ struct sccp_session *session_new(char *ip, char *port)
 	hints.ai_socktype = SOCK_STREAM;
 	getaddrinfo(ip, port, &hints, &res);
 
+	printf("connection to %s:%s...\n", ip, port);
+
 	session->sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 	if (session->sockfd == -1) {
 		fprintf(stdout, "socket() failed\n");
@@ -121,7 +124,7 @@ struct sccp_session *session_new(char *ip, char *port)
 
 	ret = connect(session->sockfd, res->ai_addr, res->ai_addrlen); 
 	if (ret == -1) {
-		fprintf(stdout, "connect() failed\n");
+		fprintf(stdout, "connect() failed: %s\n", strerror(errno));
 		free(session);
 		return NULL;
 	}
@@ -608,9 +611,9 @@ void *thread_call(void *data)
 	while (1) {
 
 		transmit_offhook_message(phone);
-		transmit_keypad_button_message(phone, 2);
+		transmit_keypad_button_message(phone, 1);
 		transmit_keypad_button_message(phone, 0);
-		transmit_keypad_button_message(phone, 0);
+		transmit_keypad_button_message(phone, 7);
 		sleep(2);// rand() % 3 + 1);
 		transmit_onhook_message(phone);
 
@@ -643,32 +646,16 @@ void *thread_call2(void *data)
 		transmit_offhook_message(phone);
 		transmit_keypad_button_message(phone, 1);
 		transmit_keypad_button_message(phone, 0);
-		transmit_keypad_button_message(phone, 1);
+		transmit_keypad_button_message(phone, 2);
 		sleep(1);// rand() % 3 + 1);
 		transmit_onhook_message(phone);
 
 	}
 }
 
-void usage()
+int sccpp_test_stress(char *ip, char *port)
 {
-	printf("Usage: sccpp <Ip> <Port>\n");
-}
-
-
-int main(int argc, char *argv[])
-{
-	int ret = 0;
-	
-	if (argc < 3) {
-		usage();
-		return -1;
-	}
-
-	char *ip = strdup(argv[1]);
-	char *port = strdup(argv[2]);
-
-/* PHONE 1 */
+	/* PHONE 1 */
 	struct phone *c7940 = NULL;
 	c7940 = phone_new("SEP001AA289341A", 0, 1, 0xffffff, SCCP_DEVICE_7940, 0, 0, 0);
 	c7940->session = session_new(ip, port);
@@ -682,7 +669,7 @@ int main(int argc, char *argv[])
 	pthread_t thread;
 	pthread_create(&thread, NULL, thread_phone, c7940);
 
-/* PHONE 2 */
+	/* PHONE 2 */
 	struct phone *d7940 = NULL;
 	d7940 = phone_new("SEP001AA289341B", 0, 1, 0xffffff, SCCP_DEVICE_7940, 0, 0, 0);
 	d7940->session = session_new(ip, port);
@@ -695,13 +682,72 @@ int main(int argc, char *argv[])
 	phone_register(d7940);
 	pthread_t thread2, thread3;
 	pthread_create(&thread2, NULL, thread_phone, d7940);
-/********/
 
+	/* dial! */
 	pthread_create(&thread3, NULL, thread_call, c7940);
 	pthread_create(&thread3, NULL, thread_call2, d7940);
 
 	pthread_join(thread, NULL);
 	pthread_join(thread2, NULL);
+
+	return 0;
+}
+
+int sccpp_test_connect(char *ip, char *port)
+{
+	struct phone *c7940 = NULL;
+	c7940 = phone_new("SEP001AA289341A", 0, 1, 0xffffff, SCCP_DEVICE_7940, 0, 0, 0);
+	c7940->session = session_new(ip, port);
+
+	if (c7940->session == NULL) {
+		fprintf(stdout, "can't create a new session\n");
+		return -1;
+	}
+
+	phone_register(c7940);
+
+	return 0;
+}
+
+extern char *optarg;
+extern int optind, opterr, optopt;
+#define SCCP_PORT "2000"
+
+int main(int argc, char *argv[])
+{
+	int ret = 0;
+
+	char ip[16] = "127.0.0.1";
+	int opt;
+	int mode_stress = 0;
+	int mode_connect = 0;
+
+	while ((opt = getopt(argc, argv, "sci:")) != -1) {
+		switch (opt) {
+		case 's':
+			mode_stress = 1;
+			break;
+		case 'c':
+			mode_connect = 1;
+			break;
+		case 'i':
+			strncpy(ip, optarg, 16);
+			break;
+		}
+	}
+
+	if (!(mode_stress ^ mode_connect)) {
+		fprintf(stderr, "Usage %s [-s | -c] {-i ip (default: 127.0.0.1)}\n", argv[0]);
+		exit(EXIT_FAILURE);
+	}
+
+	if (mode_stress) { /* Experimental */
+		ret = sccpp_test_stress(ip, SCCP_PORT);
+	}
+
+	if (mode_connect) {
+		ret = sccpp_test_connect(ip, SCCP_PORT);
+	}
 
 	return ret;
 }
