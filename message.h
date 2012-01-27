@@ -4,9 +4,10 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include "message.h"
+#include "phone.h"
 #include "sccpp.h"
 
-struct sccp_msg *msg_alloc(size_t data_length, int message_id);
 
 /*********************
  * Protocol Messages *
@@ -454,6 +455,17 @@ struct sccp_msg {
 	union sccp_data data;
 };
 
+struct sccp_msg *msg_alloc(size_t data_length, int message_id);
 int transmit_message(struct sccp_msg *msg, struct sccp_session *session);
+int transmit_register_message(struct phone *phone);
+int transmit_keypad_button_message(struct phone *phone, uint32_t dtmf);
+int transmit_onhook_message(struct phone *phone);
+int transmit_offhook_message(struct phone *phone);
+int transmit_time_date_req_message(struct phone *phone);
+int transmit_register_available_lines_message(struct phone *phone);
+int transmit_line_status_req_message(struct phone *phone);
+int transmit_softkey_set_req_message(struct phone *phone);
+int transmit_softkey_template_req_message(struct phone *phone);
+int transmit_button_template_req_message(struct phone *phone);
 
 #endif /* SCCP_MESSAGE_H */

@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -42,3 +43,176 @@ int transmit_message(struct sccp_msg *msg, struct sccp_session *session)
 	return nbyte;
 }
 
+int transmit_register_message(struct phone *phone)
+{
+	struct sccp_msg *msg = NULL;
+	int ret = 0;
+
+	msg = msg_alloc(sizeof(struct register_message), REGISTER_MESSAGE);
+	if (msg == NULL)
+		return -1;
+
+	memcpy(msg->data.reg.name, phone->name, sizeof(msg->data.reg.name));
+	msg->data.reg.userId = htolel(phone->userId);
+	msg->data.reg.instance = htolel(phone->instance);
+	msg->data.reg.ip = letohl(phone->ip);
+	msg->data.reg.type = htolel(phone->type);
+	msg->data.reg.maxStreams = htolel(phone->maxStreams);
+	msg->data.reg.protoVersion = htolel(phone->protoVersion);
+
+	ret = transmit_message(msg, phone->session);
+	if (ret == -1)
+		return -1;
+
+	return 0;
+}
+
+int transmit_keypad_button_message(struct phone *phone, uint32_t dtmf)
+{
+	int ret = 0;
+	struct sccp_msg *msg;
+
+	msg = msg_alloc(sizeof(struct keypad_button_message), KEYPAD_BUTTON_MESSAGE);
+	if (msg == NULL)
+		return -1;
+
+	msg->data.keypad.button = htolel(dtmf);
+	msg->data.keypad.instance = htolel(1);
+	msg->data.keypad.callId = htolel(0);
+
+	ret = transmit_message(msg, phone->session);
+	if (ret == -1)
+		return -1;
+
+	return 0;
+}
+
+int transmit_onhook_message(struct phone *phone)
+{
+	int ret = 0;
+	struct sccp_msg *msg;
+
+	msg = msg_alloc(sizeof(struct onhook_message), ONHOOK_MESSAGE);
+	if (msg == NULL)
+		return -1;
+
+	ret = transmit_message(msg, phone->session);
+	if (ret == -1)
+		return -1;
+
+	return 0;
+}
+
+int transmit_offhook_message(struct phone *phone)
+{
+	int ret = 0;
+	struct sccp_msg *msg;
+
+	msg = msg_alloc(sizeof(struct offhook_message), OFFHOOK_MESSAGE);
+	if (msg == NULL)
+		return -1;
+
+	ret = transmit_message(msg, phone->session);
+	if (ret == -1)
+		return -1;
+
+	return 0;
+}
+
+int transmit_time_date_req_message(struct phone *phone)
+{
+	int ret = 0;
+	struct sccp_msg *msg;
+
+	msg = msg_alloc(0, TIME_DATE_REQ_MESSAGE);
+	if (msg == NULL)
+		return -1;
+
+	ret = transmit_message(msg, phone->session);
+	if (ret == -1)
+		return -1;
+
+	return 0;
+}
+
+int transmit_register_available_lines_message(struct phone *phone)
+{
+	int ret = 0;
+	struct sccp_msg *msg;
+
+	msg = msg_alloc(0, REGISTER_AVAILABLE_LINES_MESSAGE);
+	if (msg == NULL)
+		return -1;
+
+	ret = transmit_message(msg, phone->session);
+	if (ret == -1)
+		return -1;
+
+	return 0;
+}
+
+int transmit_line_status_req_message(struct phone *phone)
+{
+	int ret = 0;
+	struct sccp_msg *msg;
+
+	msg = msg_alloc(sizeof(struct line_status_req_message), LINE_STATUS_REQ_MESSAGE);
+	if (msg == NULL)
+		return -1;
+
+	msg->data.line.lineNumber = htolel(1);
+
+	ret = transmit_message(msg, phone->session);
+	if (ret == -1)
+		return -1;
+
+	return 0;
+}
+
+int transmit_softkey_set_req_message(struct phone *phone)
+{
+	int ret = 0;
+	struct sccp_msg *msg;
+
+	msg = msg_alloc(0, SOFTKEY_SET_REQ_MESSAGE);
+	if (msg == NULL)
+		return -1;
+
+	ret = transmit_message(msg, phone->session);
+	if (ret == -1)
+		return -1;
+
+	return 0;
+}
+
+int transmit_softkey_template_req_message(struct phone *phone)
+{
+	int ret = 0;
+	struct sccp_msg *msg;
+
+	msg = msg_alloc(0, SOFTKEY_TEMPLATE_REQ_MESSAGE);
+	if (msg == NULL)
+		return -1;
+
+	ret = transmit_message(msg, phone->session);
+	if (ret == -1)
+		return -1;
+
+	return 0;
+}
+
+int transmit_button_template_req_message(struct phone *phone)
+{
+	int ret = 0;
+	struct sccp_msg *msg;
+
+	msg = msg_alloc(0, BUTTON_TEMPLATE_REQ_MESSAGE);
+	if (msg == NULL)
+		return -1;
+
+	ret = transmit_message(msg, phone->session);
+	if (ret == -1)
+		return -1;
+
+	return 0;
+}

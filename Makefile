@@ -4,8 +4,8 @@
 
 CC=gcc
 CFLAGS=-I /usr/include -Wall -g -pthread
-DEPS = message.h utils.h
-OBJ = sccpp.o message.o
+DEPS = message.h utils.h phone.h
+OBJ = main.o sccpp.o message.o phone.o
 
 %.o: %.c
 	$(CC) $< -c -o $@ $(CFLAGS)

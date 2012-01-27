@@ -1,0 +1,45 @@
+#ifndef SCCP_PHONE_H
+#define SCCP_PHONE_H
+
+#include <stdint.h>
+#include <stdlib.h>
+
+#define SCCP_MAX_PACKET_SZ 2000
+struct sccp_session {
+	int sockfd;
+	char inbuf[SCCP_MAX_PACKET_SZ];
+	char outbuf[SCCP_MAX_PACKET_SZ];
+};
+
+struct phone {
+
+	struct sccp_session *session;
+
+	char name[16];
+	uint32_t userId;
+	uint32_t instance;
+	uint32_t ip;
+	uint32_t type;
+	uint32_t maxStreams;
+	uint32_t activeStreams;
+	uint8_t protoVersion;
+
+	uint32_t keepAlive;
+	char *dateTemplate;
+	uint32_t secondaryKeepAlive;
+};
+
+struct phone *phone_new(char name[16],
+                uint32_t userId,
+                uint32_t instance,
+                uint32_t ip,
+                uint32_t type,
+                uint32_t maxStreams,
+                uint32_t activeStreams,
+                uint8_t protoVersion);
+
+int phone_register(struct phone *phone);
+void *thread_phone(void *data);
+struct sccp_session *session_new(char *ip, char *port);
+
+#endif /* SCCP_PHONE_H_ */
