@@ -1,6 +1,8 @@
 #ifndef SCCP_DEVICE_H
 #define SCCP_DEVICE_H
 
+#include <stdint.h>
+
 #define SCCP_DEVICE_7940	8
 #define SCCP_DEVICE_7941	115
 

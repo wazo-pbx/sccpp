@@ -18,69 +18,40 @@
 #include <string.h>
 #include <unistd.h>
 
-//#include "device.h"
+#include "device.h"
 #include "message.h"
 #include "phone.h"
 #include "sccpp.h"
 #include "utils.h"
 
-void *thread_call(void *data)
+void *caller(void *data)
 {
-
 	struct phone *phone = data;
+	char *exten = NULL;
+	int exten_len = 0;
+	int i = 0;
 
+	exten = strdup(phone->exten);
+	exten_len = strlen(exten);
 	srand(time(NULL));
 
 	while (1) {
 
 		transmit_offhook_message(phone);
-		transmit_keypad_button_message(phone, 1);
-		transmit_keypad_button_message(phone, 0);
-		transmit_keypad_button_message(phone, 7);
-		sleep(2);// rand() % 3 + 1);
-		transmit_onhook_message(phone);
+		for (i = 0; i < exten_len; i++) {
+			transmit_keypad_button_message(phone, exten[i] - 48);
+		}
+		sleep(rand() % (3 - 1 + 1) + 1);
 
-		transmit_offhook_message(phone);
-		transmit_keypad_button_message(phone, 2);
-		transmit_keypad_button_message(phone, 0);
-		transmit_keypad_button_message(phone, 3);
-		sleep(2);// rand() % 3 + 1);
 		transmit_onhook_message(phone);
-
 	}
 }
 
-void *thread_call2(void *data)
+int sccpp_test_stress(char *ip, char *port, char *exten)
 {
-
-	struct phone *phone = data;
-
-	srand(time(NULL));
-
-	while (1) {
-
-		transmit_offhook_message(phone);
-		transmit_keypad_button_message(phone, 1);
-		transmit_keypad_button_message(phone, 0);
-		transmit_keypad_button_message(phone, 3);
-		sleep(1);// rand() % 3 + 1);
-		transmit_onhook_message(phone);
-
-		transmit_offhook_message(phone);
-		transmit_keypad_button_message(phone, 1);
-		transmit_keypad_button_message(phone, 0);
-		transmit_keypad_button_message(phone, 2);
-		sleep(1);// rand() % 3 + 1);
-		transmit_onhook_message(phone);
-
-	}
-}
-
-int sccpp_test_stress(char *ip, char *port)
-{
-	/* PHONE 1 */
+	/**** PHONE 1 */
 	struct phone *c7940 = NULL;
-	c7940 = phone_new("SEP001AA289341A", 0, 1, 0xffffff, 8, 0, 0, 0);
+	c7940 = phone_new("SEP001AA289341A", 0, 1, 0xffffff, SCCP_DEVICE_7940, 0, 0, 0);
 	c7940->session = session_new(ip, port);
 
 	if (c7940->session == NULL) {
@@ -88,13 +59,17 @@ int sccpp_test_stress(char *ip, char *port)
 		return -1;
 	}
 
+	pthread_t thread_register, thread_caller;
+	pthread_create(&thread_register, NULL, phone_handler, c7940);
 	phone_register(c7940);
-	pthread_t thread;
-	pthread_create(&thread, NULL, thread_phone, c7940);
 
-	/* PHONE 2 */
+	/* dial! */
+	strcpy(c7940->exten, exten);
+	pthread_create(&thread_caller, NULL, caller, c7940);
+
+	/**** PHONE 2 */
 	struct phone *d7940 = NULL;
-	d7940 = phone_new("SEP001AA289341B", 0, 1, 0xffffff, 8, 0, 0, 0);
+	d7940 = phone_new("SEP001AA289341B", 0, 1, 0xffffff, SCCP_DEVICE_7940, 0, 0, 0);
 	d7940->session = session_new(ip, port);
 
 	if (d7940->session == NULL) {
@@ -103,22 +78,23 @@ int sccpp_test_stress(char *ip, char *port)
 	}
 
 	phone_register(d7940);
-	pthread_t thread2, thread3;
-	pthread_create(&thread2, NULL, thread_phone, d7940);
+	pthread_t thread_register2, thread_caller2;
+	pthread_create(&thread_register2, NULL, phone_handler, d7940);
 
 	/* dial! */
-	pthread_create(&thread3, NULL, thread_call, c7940);
-	pthread_create(&thread3, NULL, thread_call2, d7940);
+	strcpy(d7940->exten, exten);
+	pthread_create(&thread_caller2, NULL, caller, d7940);
 
-	pthread_join(thread, NULL);
-	pthread_join(thread2, NULL);
-
+	pthread_join(thread_caller2, NULL);
+	pthread_join(thread_caller, NULL);
 	return 0;
 }
 
 int sccpp_test_connect(char *ip, char *port)
 {
 	struct phone *c7940 = NULL;
+	pthread_t thread;
+
 	c7940 = phone_new("SEP001AA289341A", 0, 1, 0xffffff, 8, 0, 0, 0);
 	c7940->session = session_new(ip, port);
 
@@ -127,7 +103,14 @@ int sccpp_test_connect(char *ip, char *port)
 		return -1;
 	}
 
+	pthread_create(&thread, NULL, phone_handler, c7940);
 	phone_register(c7940);
 
+	sleep(1);
+	transmit_offhook_message(c7940);
+	sleep(1);
+	transmit_onhook_message(c7940);
+
+	pthread_join(thread, NULL);
 	return 0;
 }

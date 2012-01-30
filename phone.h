@@ -27,6 +27,8 @@ struct phone {
 	uint32_t keepAlive;
 	char *dateTemplate;
 	uint32_t secondaryKeepAlive;
+
+	char exten[15];
 };
 
 struct phone *phone_new(char name[16],
@@ -39,7 +41,7 @@ struct phone *phone_new(char name[16],
                 uint8_t protoVersion);
 
 int phone_register(struct phone *phone);
-void *thread_phone(void *data);
+void *phone_handler(void *data);
 struct sccp_session *session_new(char *ip, char *port);
 
 #endif /* SCCP_PHONE_H_ */

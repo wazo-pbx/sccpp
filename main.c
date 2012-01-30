@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,18 +12,22 @@ int main(int argc, char *argv[])
 {
 	int ret = 0;
 
+	char exten[15] = "";
 	char ip[16] = "127.0.0.1";	/* Default SCCP server IP */
 	int opt;
 	int mode_stress = 0;
 	int mode_connect = 0;
 
-	while ((opt = getopt(argc, argv, "sci:")) != -1) {
+	while ((opt = getopt(argc, argv, "sce:i:")) != -1) {
 		switch (opt) {
 		case 's':
 			mode_stress = 1;
 			break;
 		case 'c':
 			mode_connect = 1;
+			break;
+		case 'e':
+			strcpy(exten, optarg);
 			break;
 		case 'i':
 			strncpy(ip, optarg, 16);
@@ -33,12 +36,13 @@ int main(int argc, char *argv[])
 	}
 
 	if (!(mode_stress ^ mode_connect)) {
-		fprintf(stderr, "Usage %s [-s | -c] {-i ip (default: 127.0.0.1)}\n", argv[0]);
+		fprintf(stderr, "Usage %s [-s | -c] {-i ip (default: 127.0.0.1)} {-e extension}\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
 
 	if (mode_stress) { /* Experimental */
-		ret = sccpp_test_stress(ip, SCCP_PORT);
+		printf("exten %s\n", exten);
+		ret = sccpp_test_stress(ip, SCCP_PORT, exten);
 	}
 
 	if (mode_connect) {

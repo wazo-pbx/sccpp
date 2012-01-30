@@ -321,7 +321,7 @@ struct sccp_session *session_new(char *ip, char *port)
 
 	return session;
 }
-void *thread_phone(void *data)
+void *phone_handler(void *data)
 {
 	struct phone *phone = data;
 	struct sccp_msg *msg = NULL;
