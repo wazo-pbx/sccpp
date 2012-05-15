@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <ortp/ortp.h>
-#include "rtp.h"
 
 #include <ortp/ortp.h>
 #include <signal.h>
@@ -14,6 +13,8 @@
 #include <stdio.h>
 #include <sys/types.h>
 
+#include "phone.h"
+#include "rtp.h"
 
 int cond = 1;
 
@@ -28,6 +29,9 @@ void *start_rtp_recv(void *data)
 	ortp_init();
 	ortp_scheduler_init();
 
+	struct phone *phone;
+	phone = (struct phone *)data;
+
 	ortp_set_log_level_mask(ORTP_DEBUG | ORTP_MESSAGE | ORTP_WARNING | ORTP_ERROR);
 
 	//signal(SIGINT, stop_handler);
@@ -36,7 +40,7 @@ void *start_rtp_recv(void *data)
 
 	rtp_session_set_scheduling_mode(session, 1);
 	rtp_session_set_blocking_mode(session, 1);
-	rtp_session_set_local_addr(session, "10.97.8.1", 1001);
+	rtp_session_set_local_addr(session, "10.97.8.1", phone->local_rtp_port);
 	rtp_session_set_connected_mode(session, 1);
 	rtp_session_set_symmetric_rtp(session, 1);
 	rtp_session_enable_adaptive_jitter_compensation(session, 1);
@@ -44,6 +48,8 @@ void *start_rtp_recv(void *data)
 	rtp_session_set_payload_type(session, 0);
 	rtp_session_signal_connect(session, "ssrc_changed", NULL, 0);
 	rtp_session_signal_connect(session, "ssrc_changed", (RtpCallback)rtp_session_reset, 0);
+
+	printf("start rtp recv (%d)\n", phone->local_rtp_port);
 
 	int err = 0;
 	size_t ret =0;
@@ -57,7 +63,7 @@ void *start_rtp_recv(void *data)
 	sound_fd = open("/dev/audio", O_WRONLY);
 	printf("sound_fd: %d\n", sound_fd);
 
-	while (cond) {
+	while (phone->rtp_recv) {
 
 		have_more = 1;
 
@@ -81,6 +87,8 @@ void *start_rtp_recv(void *data)
 	ortp_exit();
 
 	ortp_global_stats_display();
+
+	printf("stop rtp recv\n");
 
     return NULL;
 }
@@ -181,17 +189,15 @@ void close_mic()
 
 void *start_rtp_send(void *data)
 {
-
 	RtpSession *session;
 	unsigned char buffer[160];
 	int i;
 	FILE *infile;
 	int outfile;
 	uint32_t user_ts=0;
-	uint32_t port;
 
-	port = (*(uint32_t *)data);
-	printf("port %d\n", port);
+	struct phone *phone;
+	phone = (struct phone *)data;
 
 	ortp_init();
 	ortp_scheduler_init();
@@ -202,8 +208,10 @@ void *start_rtp_send(void *data)
 	rtp_session_set_scheduling_mode(session, 1);
 	rtp_session_set_blocking_mode(session, 1);
 	rtp_session_set_connected_mode(session, TRUE);
-	rtp_session_set_remote_addr(session, "10.97.8.5", port);
+	rtp_session_set_remote_addr(session, "10.97.8.5", phone->remote_rtp_port);
 	rtp_session_set_payload_type(session, 0);
+
+	printf("start rtp send (%d)\n", phone->remote_rtp_port);
 
 	//infile=fopen("./music.raw","r");
 	//outfile=open("./zoo.raw", O_WRONLY);
@@ -212,7 +220,7 @@ void *start_rtp_send(void *data)
 	//printf("size %d\n", size);
 	char buffer2[160];
 
-	while (1) {
+	while (phone->rtp_send) {
 
 		i = read_mic(buffer2);
 
@@ -223,10 +231,13 @@ void *start_rtp_send(void *data)
 		user_ts+=i;
 	}
 
-	fclose(infile);
+	//fclose(infile);
+	close_mic();
 	rtp_session_destroy(session);
 	ortp_exit();
 	ortp_global_stats_display();
+
+	printf("stop rtp send\n");
 
 	return NULL;
 }

@@ -239,21 +239,26 @@ int transmit_open_receive_channel_ack_message(struct phone *phone)
 	int ret = 0;
 	struct sccp_msg *msg;
 
+	static int port = 1000;
+
 	msg = msg_alloc(sizeof(struct open_receive_channel_ack_message), OPEN_RECEIVE_CHANNEL_ACK_MESSAGE);
 	if (msg == NULL)
 		return -1;
 
 	msg->data.openreceivechannelack.status = htolel(1);
 	msg->data.openreceivechannelack.ipAddr = letohl(phone->ip);
-	msg->data.openreceivechannelack.port = htolel(1001);
+	msg->data.openreceivechannelack.port = htolel(port);
 	msg->data.openreceivechannelack.passThruId = htolel(999);
 
 	ret = transmit_message(msg, phone->session);
 	if (ret == -1)
 		return -1;
 
+	phone->local_rtp_port = port++;
+	phone->rtp_recv = 1;
+
 	pthread_t thread_recv;
-	pthread_create(&thread_recv, NULL, start_rtp_recv, NULL);
+	pthread_create(&thread_recv, NULL, start_rtp_recv, phone);
 
 	return 0;
 

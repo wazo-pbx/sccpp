@@ -43,6 +43,7 @@ int handle_date_time_res_message(struct sccp_msg *msg, struct phone *phone)
 int handle_stop_media_transmission_message(struct sccp_msg *msg, struct phone *phone)
 {
 	fprintf(stdout, "%s\n", __func__);
+	phone->rtp_send = 0;
 	return 0;
 }
 
@@ -57,10 +58,12 @@ int handle_start_media_transmission_message(struct sccp_msg *msg, struct phone *
 	fprintf(stdout, "%s\n", __func__);
 
 	phone->remote_rtp_port = letohl(msg->data.startmedia.remotePort);
+
 	printf("phone->remote_rtp_port %d\n", phone->remote_rtp_port);
+	phone->rtp_send = 1;
 
 	pthread_t thread_send;
-	pthread_create(&thread_send, NULL, start_rtp_send, &phone->remote_rtp_port);
+	pthread_create(&thread_send, NULL, start_rtp_send, phone);
 
 	return 0;
 }
@@ -68,6 +71,7 @@ int handle_start_media_transmission_message(struct sccp_msg *msg, struct phone *
 int handle_close_receive_channel_message(struct sccp_msg *msg, struct phone *phone)
 {
 	fprintf(stdout, "%s\n", __func__);
+	phone->rtp_recv = 0;
 	return 0;
 }
 
@@ -382,12 +386,13 @@ void *phone_handler(void *data)
 		time(&now);
 
 		if (now > start + 5) {
+
 			transmit_keep_alive_message(phone);
 			time(&start);
 /*
 			if (toggle == 1) {
 				transmit_offhook_message(phone);
-				usleep(300);
+				usleep(500);
 				do_dial_extension(phone, "*10");
 				toggle = 0;
 			}

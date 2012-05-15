@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (mode_connect) {
-		ret = sccpp_test_connect(remote_ip, SCCP_PORT);
+		ret = sccpp_test_connect(remote_ip, SCCP_PORT, exten);
 	}
 
 	if (mode_load) {

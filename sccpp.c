@@ -101,7 +101,7 @@ int sccpp_test_stress(char *ip, char *port, char *exten)
 	return 0;
 }
 
-int sccpp_test_connect(char *ip, char *port)
+int sccpp_test_connect(char *ip, char *port, char *exten)
 {
 	struct phone *c7940 = NULL;
 	pthread_t thread;
@@ -124,7 +124,7 @@ int sccpp_test_connect(char *ip, char *port)
 	sleep(3);
 
 	transmit_offhook_message(c7940);
-	do_dial_extension(c7940, "103");
+	do_dial_extension(c7940, exten);
 /*
 	sleep(3);
 	transmit_onhook_message(c7940);
@@ -160,6 +160,10 @@ int sccpp_test_load(char *local_ip, char *server_ip, char *server_port, int thre
 	mac = malloc(linesz + 1);
 
 	f = fopen("./sccp.conf.simple", "r");
+	if (f == NULL) {
+		fprintf(stderr, "./sccp.conf.simple not found\n");
+		return -1;
+	}
 
 	do {
 		ret = getline(&mac, &linesz, f);

@@ -34,6 +34,10 @@ struct phone {
 	char exten[15];
 
 	uint32_t remote_rtp_port;
+	uint32_t local_rtp_port;
+
+	uint8_t rtp_send;
+	uint8_t rtp_recv;
 };
 
 struct phone *phone_new(char name[16],
