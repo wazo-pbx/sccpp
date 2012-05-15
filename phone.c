@@ -384,15 +384,18 @@ void *phone_handler(void *data)
 		if (now > start + 5) {
 			transmit_keep_alive_message(phone);
 			time(&start);
-
+/*
 			if (toggle == 1) {
 				transmit_offhook_message(phone);
+				usleep(300);
+				do_dial_extension(phone, "*10");
 				toggle = 0;
 			}
 			else {
 				transmit_onhook_message(phone);
 				toggle = 1;
 			}
+*/
 		}
 	}
 

@@ -13,7 +13,8 @@ int main(int argc, char *argv[])
 	int ret = 0;
 
 	char exten[15] = "";
-	char ip[16] = "127.0.0.1";	/* Default SCCP server IP */
+	char remote_ip[16] = "127.0.0.1";	/* Default SCCP server IP */
+	char local_ip[16];
 	int opt;
 	int mode_connect = 0;
 	int mode_load = 0;
@@ -34,27 +35,30 @@ int main(int argc, char *argv[])
 			strcpy(exten, optarg);
 			break;
 		case 'i':
-			strncpy(ip, optarg, 16);
+			strncpy(remote_ip, optarg, 16);
+			break;
+		case 'o':
+			strncpy(local_ip, optarg, 16);
 			break;
 		}
 	}
 
 	if (!(mode_stress ^ mode_connect ^ mode_load)) {
-		fprintf(stderr, "Usage %s [-s | -c] {-i ip (default: 127.0.0.1)} {-e extension}\n", argv[0]);
+		fprintf(stderr, "Usage %s [-s | -c | -l] {-o local ip} {-r remote ip (default: 127.0.0.1)} {-e extension to call}\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
 
 	if (mode_stress) { /* Experimental */
 		printf("exten %s\n", exten);
-		ret = sccpp_test_stress(ip, SCCP_PORT, exten);
+		ret = sccpp_test_stress(remote_ip, SCCP_PORT, exten);
 	}
 
 	if (mode_connect) {
-		ret = sccpp_test_connect(ip, SCCP_PORT);
+		ret = sccpp_test_connect(remote_ip, SCCP_PORT);
 	}
 
 	if (mode_load) {
-		ret = sccpp_test_load(ip, SCCP_PORT);
+		ret = sccpp_test_load(local_ip, remote_ip, SCCP_PORT);
 	}
 
 	return ret;

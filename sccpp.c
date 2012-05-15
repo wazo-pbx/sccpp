@@ -133,10 +133,9 @@ int sccpp_test_connect(char *ip, char *port)
 	return 0;
 }
 
-int sccpp_test_load(char *server_ip, char *server_port)
+int sccpp_test_load(char *local_ip, char *server_ip, char *server_port)
 {
 	struct phone *c7940 = NULL;
-	int i = 2;
 
 	char name[16];
 	uint32_t userId = 0;
@@ -151,18 +150,19 @@ int sccpp_test_load(char *server_ip, char *server_port)
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, 0x82400);
 
-
 	FILE *f = NULL;
-	size_t n = 256;
-	int ret = 0;
 	char *mac, *line;
+	size_t linesz = 256;
 
-	mac = malloc (n + 1);
+	int ret = 0;
+	int i = 0;
+
+	mac = malloc(linesz + 1);
 
 	f = fopen("./sccp.conf.simple", "r");
 
 	do {
-		ret = getline(&mac, &n, f);
+		ret = getline(&mac, &linesz, f);
 
 		if (ret > 0) {
 			line = strchr(mac, ',');
@@ -171,7 +171,7 @@ int sccpp_test_load(char *server_ip, char *server_port)
 				line++;
 			}
 
-			c7940 = phone_new(mac, userId, instance, "10.97.8.1", type, maxStreams, activeStreams, protoVersion);
+			c7940 = phone_new(mac, userId, instance, local_ip, type, maxStreams, activeStreams, protoVersion);
 			c7940->session = session_new(server_ip, server_port);
 
 			pthread_create(&c7940->session->thread, &attr, phone_handler, c7940);
@@ -180,10 +180,9 @@ int sccpp_test_load(char *server_ip, char *server_port)
 			usleep(300);
 
 			printf("%s => %s", mac, line);
-
 		}
 
-	} while (ret > 0);
+	} while (ret > 0 && i++ < 10);
 
 	fclose(f);
 

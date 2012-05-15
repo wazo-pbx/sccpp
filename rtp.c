@@ -24,14 +24,16 @@ void stop_handler(int signum)
 
 void *start_rtp_recv(void *data)
 {
-    printf("start_rtp_recv\n");
-
 	RtpSession *session;
 	ortp_init();
 	ortp_scheduler_init();
-	ortp_set_log_level_mask(ORTP_DEBUG|ORTP_MESSAGE|ORTP_WARNING|ORTP_ERROR);
+
+	ortp_set_log_level_mask(ORTP_DEBUG | ORTP_MESSAGE | ORTP_WARNING | ORTP_ERROR);
+
 	//signal(SIGINT, stop_handler);
-	session=rtp_session_new(RTP_SESSION_RECVONLY);
+
+	session = rtp_session_new(RTP_SESSION_RECVONLY);
+
 	rtp_session_set_scheduling_mode(session, 1);
 	rtp_session_set_blocking_mode(session, 1);
 	rtp_session_set_local_addr(session, "10.97.8.1", 1001);
@@ -42,7 +44,6 @@ void *start_rtp_recv(void *data)
 	rtp_session_set_payload_type(session, 0);
 	rtp_session_signal_connect(session, "ssrc_changed", NULL, 0);
 	rtp_session_signal_connect(session, "ssrc_changed", (RtpCallback)rtp_session_reset, 0);
-
 
 	int err = 0;
 	size_t ret =0;
@@ -61,12 +62,10 @@ void *start_rtp_recv(void *data)
 		have_more = 1;
 
 		while (have_more) {
+
 			err = rtp_session_recv_with_ts(session, buffer, 160, ts, &have_more);
-
-
 			if (err > 0)
 				stream_received = 1;
-
 
 			if (stream_received && err > 0) {
 				ret = write(sound_fd, buffer, err);
@@ -83,8 +82,6 @@ void *start_rtp_recv(void *data)
 
 	ortp_global_stats_display();
 
-    printf("close rtp receive\n");
-
     return NULL;
 }
 
@@ -92,104 +89,94 @@ void *start_rtp_recv(void *data)
 #define ALSA_PCM_NEW_HW_PARAMS_API
 #include <alsa/asoundlib.h>
 
- snd_pcm_t *handle;
-  snd_pcm_hw_params_t *params;
-  snd_pcm_uframes_t frames;
-  int size;
+snd_pcm_t *handle;
+snd_pcm_hw_params_t *params;
+snd_pcm_uframes_t frames;
+int size;
 
 void init_mic()
 {
-  //long loops;
-  int rc;
-   unsigned int val;
-  int dir;
-  //char *buffer;
+	int rc;
+	unsigned int val;
+	int dir;
 
-  /* Open PCM device for recording (capture). */
-  rc = snd_pcm_open(&handle, "default",
-                    SND_PCM_STREAM_CAPTURE, 0);
-  if (rc < 0) {
-    fprintf(stderr,
-            "unable to open pcm device: %s\n",
-            snd_strerror(rc));
-    exit(1);
-  }
+	/* Open PCM device for recording (capture). */
+	rc = snd_pcm_open(&handle, "default", SND_PCM_STREAM_CAPTURE, 0);
 
-  /* Allocate a hardware parameters object. */
-  snd_pcm_hw_params_alloca(&params);
+	if (rc < 0) {
+		fprintf(stderr, "unable to open pcm device: %s\n", snd_strerror(rc));
+		return;
+	}
 
-  /* Fill it in with default values. */
-  snd_pcm_hw_params_any(handle, params);
+	/* Allocate a hardware parameters object. */
+	snd_pcm_hw_params_alloca(&params);
 
-  /* Set the desired hardware parameters. */
+	/* Fill it in with default values. */
+	snd_pcm_hw_params_any(handle, params);
 
-  /* Interleaved mode */
-  snd_pcm_hw_params_set_access(handle, params,
-                      SND_PCM_ACCESS_RW_INTERLEAVED);
+	/* Set the desired hardware parameters. */
 
-  /* Signed 16-bit little-endian format */
-  snd_pcm_hw_params_set_format(handle, params, SND_PCM_FORMAT_MU_LAW);
+	/* Interleaved mode */
+	snd_pcm_hw_params_set_access(handle, params, SND_PCM_ACCESS_RW_INTERLEAVED);
 
-  /* channels (mono) */
-  snd_pcm_hw_params_set_channels(handle, params, 1);
+	/* Signed 16-bit little-endian format */
+	snd_pcm_hw_params_set_format(handle, params, SND_PCM_FORMAT_MU_LAW);
 
-  /* bits/second sampling rate */
-  val = 8000;
-  snd_pcm_hw_params_set_rate_near(handle, params,
-                                  &val, &dir);
+	/* channels (mono) */
+	snd_pcm_hw_params_set_channels(handle, params, 1);
 
-  /* Set period size to 32 frames. */
-  frames = 32;
-  snd_pcm_hw_params_set_period_size_near(handle,
-                              params, &frames, &dir);
+	/* bits/second sampling rate */
+	val = 8000;
+	snd_pcm_hw_params_set_rate_near(handle, params, &val, &dir);
 
-  /* Write the parameters to the driver */
-  rc = snd_pcm_hw_params(handle, params);
-  if (rc < 0) {
-    fprintf(stderr,
-            "unable to set hw parameters: %s\n",
-            snd_strerror(rc));
-    exit(1);
-  }
+	/* Set period size to 32 frames. */
+	frames = 32;
+	snd_pcm_hw_params_set_period_size_near(handle, params, &frames, &dir);
 
-    printf("size %d  frames %d\n", size, frames);
-  /* Use a buffer large enough to hold one period */
-  snd_pcm_hw_params_get_period_size(params,
-                                      &frames, &dir);
-  size = frames;
+	/* Write the parameters to the driver */
+	rc = snd_pcm_hw_params(handle, params);
+	if (rc < 0) {
+		fprintf(stderr, "unable to set hw parameters: %s\n", snd_strerror(rc));
+		return;
+	}
 
-    printf("size %d  frames %d\n", size, frames);
-  /* We want to loop for 5 seconds */
-  snd_pcm_hw_params_get_period_time(params,
-                                         &val, &dir);
- 
+	/* Use a buffer large enough to hold one period */
+	snd_pcm_hw_params_get_period_size(params, &frames, &dir);
 
+	size = frames;
+
+	/* We want to loop for 5 seconds */
+	snd_pcm_hw_params_get_period_time(params, &val, &dir);
 }
 
 int read_mic(char *buffer)
 {
-    int rc;
-    rc = snd_pcm_readi(handle, buffer, frames);
+	int rc;
+	rc = snd_pcm_readi(handle, buffer, frames);
 
-    if (rc == -EPIPE) {
-      /* EPIPE means overrun */
-      fprintf(stderr, "overrun occurred\n");
-      snd_pcm_prepare(handle);
-    } else if (rc < 0) {
-      fprintf(stderr,
-              "error from read: %s\n",
-              snd_strerror(rc));
-    } else if (rc != (int)frames) {
-      fprintf(stderr, "short read, read %d frames\n", rc);
-    }
+	if (rc == -EPIPE) {
 
-    return rc;
-/*
-  snd_pcm_drain(handle);
-  snd_pcm_close(handle);
-  free(buffer);
-*/
+		/* EPIPE means overrun */
+		fprintf(stderr, "overrun occurred\n");
+		snd_pcm_prepare(handle);
 
+	} else if (rc < 0) {
+
+		fprintf(stderr, "error from read: %s\n", snd_strerror(rc));
+
+	} else if (rc != (int)frames) {
+
+		fprintf(stderr, "short read, read %d frames\n", rc);
+
+	}
+
+	return rc;
+}
+
+void close_mic()
+{
+	snd_pcm_drain(handle);
+	snd_pcm_close(handle);
 }
 
 void *start_rtp_send(void *data)
@@ -199,53 +186,37 @@ void *start_rtp_send(void *data)
 	unsigned char buffer[160];
 	int i;
 	FILE *infile;
-    int outfile;
-	char *ssrc;
+	int outfile;
 	uint32_t user_ts=0;
-	int clockslide=0;
-	int jitter=0;
-    uint32_t port;
+	uint32_t port;
 
-    port = (*(uint32_t *)data);
-    printf("port %d\n", port);
+	port = (*(uint32_t *)data);
+	printf("port %d\n", port);
 
 	ortp_init();
 	ortp_scheduler_init();
-	ortp_set_log_level_mask(ORTP_MESSAGE|ORTP_WARNING|ORTP_ERROR);
-	session=rtp_session_new(RTP_SESSION_SENDONLY);	
-	
-	rtp_session_set_scheduling_mode(session,1);
-	rtp_session_set_blocking_mode(session,1);
-	rtp_session_set_connected_mode(session,TRUE);
+	ortp_set_log_level_mask(ORTP_MESSAGE | ORTP_WARNING | ORTP_ERROR);
 
+	session = rtp_session_new(RTP_SESSION_SENDONLY);
+
+	rtp_session_set_scheduling_mode(session, 1);
+	rtp_session_set_blocking_mode(session, 1);
+	rtp_session_set_connected_mode(session, TRUE);
 	rtp_session_set_remote_addr(session, "10.97.8.5", port);
+	rtp_session_set_payload_type(session, 0);
 
-	rtp_session_set_payload_type(session,0);
+	//infile=fopen("./music.raw","r");
+	//outfile=open("./zoo.raw", O_WRONLY);
 
-/*	
-	ssrc=getenv("SSRC");
-	if (ssrc!=NULL) {
-		printf("using SSRC=%i.\n",atoi(ssrc));
-		rtp_session_set_ssrc(session,atoi(ssrc));
-	}
-*/
-		
-	infile=fopen("./music.raw","r");
-    printf("infile: %d\n");
+	init_mic();
+	printf("size %d\n", size);
+	char buffer2[160];
 
-    outfile=open("./zoo.raw", "w+");
+	while (1) {
 
+		i = read_mic(buffer2);
 
-    init_mic();
-    printf("size %d\n", size);
-//    char *buffer2 = (char *) malloc(size);
-    char buffer2[160];
-
-	while(1) {
-
-        i = read_mic(buffer2);
-//        write(outfile, buffer2, size);
-
+	//write(outfile, buffer2, size);
         //i = fread(buffer, 1, 160, infile);
 
 		rtp_session_send_with_ts(session, buffer2, i, user_ts);
@@ -257,5 +228,5 @@ void *start_rtp_send(void *data)
 	ortp_exit();
 	ortp_global_stats_display();
 
-    return NULL;
+	return NULL;
 }
