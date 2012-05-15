@@ -133,7 +133,7 @@ int sccpp_test_connect(char *ip, char *port)
 	return 0;
 }
 
-int sccpp_test_load(char *local_ip, char *server_ip, char *server_port)
+int sccpp_test_load(char *local_ip, char *server_ip, char *server_port, int thread)
 {
 	struct phone *c7940 = NULL;
 
@@ -182,10 +182,11 @@ int sccpp_test_load(char *local_ip, char *server_ip, char *server_port)
 			printf("%s => %s", mac, line);
 		}
 
-	} while (ret > 0 && i++ < 10);
+	} while (ret > 0 && ++i < thread);
 
 	fclose(f);
 
 	while(1) {sleep(1);}
+
 	return 0;
 }

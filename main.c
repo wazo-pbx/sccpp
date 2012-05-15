@@ -14,13 +14,14 @@ int main(int argc, char *argv[])
 
 	char exten[15] = "";
 	char remote_ip[16] = "127.0.0.1";	/* Default SCCP server IP */
-	char local_ip[16];
+	char local_ip[16] = "";
+	int thread = 0;
 	int opt;
 	int mode_connect = 0;
 	int mode_load = 0;
 	int mode_stress = 0;
 
-	while ((opt = getopt(argc, argv, "lsce:i:")) != -1) {
+	while ((opt = getopt(argc, argv, "lsce:t:o:i:")) != -1) {
 		switch (opt) {
 		case 'l':
 			mode_load = 1;
@@ -40,11 +41,23 @@ int main(int argc, char *argv[])
 		case 'o':
 			strncpy(local_ip, optarg, 16);
 			break;
+		case 't':
+			thread = atoi(optarg);
+			break;
 		}
 	}
 
 	if (!(mode_stress ^ mode_connect ^ mode_load)) {
-		fprintf(stderr, "Usage %s [-s | -c | -l] {-o local ip} {-r remote ip (default: 127.0.0.1)} {-e extension to call}\n", argv[0]);
+		fprintf(stderr, "\nSCCP profiler usage\n\n"
+		"[mode]\n"
+		"-s\t stress\n"
+		"-c\t connect\n"
+		"-l\t load\n"
+		"\n[options]\n"
+		"-o\t local ip\n"
+		"-i\t remote ip (default: 127.0.0.1)\n"
+		"-e\t extension to call\n\n");
+
 		exit(EXIT_FAILURE);
 	}
 
@@ -58,7 +71,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (mode_load) {
-		ret = sccpp_test_load(local_ip, remote_ip, SCCP_PORT);
+		ret = sccpp_test_load(local_ip, remote_ip, SCCP_PORT, thread);
 	}
 
 	return ret;

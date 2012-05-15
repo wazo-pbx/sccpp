@@ -105,7 +105,7 @@ void init_mic()
 
 	if (rc < 0) {
 		fprintf(stderr, "unable to open pcm device: %s\n", snd_strerror(rc));
-		return;
+		exit(-1);
 	}
 
 	/* Allocate a hardware parameters object. */
@@ -137,7 +137,7 @@ void init_mic()
 	rc = snd_pcm_hw_params(handle, params);
 	if (rc < 0) {
 		fprintf(stderr, "unable to set hw parameters: %s\n", snd_strerror(rc));
-		return;
+		exit(-1);
 	}
 
 	/* Use a buffer large enough to hold one period */
@@ -209,15 +209,15 @@ void *start_rtp_send(void *data)
 	//outfile=open("./zoo.raw", O_WRONLY);
 
 	init_mic();
-	printf("size %d\n", size);
+	//printf("size %d\n", size);
 	char buffer2[160];
 
 	while (1) {
 
 		i = read_mic(buffer2);
 
-	//write(outfile, buffer2, size);
-        //i = fread(buffer, 1, 160, infile);
+		//write(outfile, buffer2, i);
+	        //i = fread(buffer, 1, 160, infile);
 
 		rtp_session_send_with_ts(session, buffer2, i, user_ts);
 		user_ts+=i;
