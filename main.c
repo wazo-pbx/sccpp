@@ -15,11 +15,15 @@ int main(int argc, char *argv[])
 	char exten[15] = "";
 	char ip[16] = "127.0.0.1";	/* Default SCCP server IP */
 	int opt;
-	int mode_stress = 0;
 	int mode_connect = 0;
+	int mode_load = 0;
+	int mode_stress = 0;
 
-	while ((opt = getopt(argc, argv, "sce:i:")) != -1) {
+	while ((opt = getopt(argc, argv, "lsce:i:")) != -1) {
 		switch (opt) {
+		case 'l':
+			mode_load = 1;
+			break;
 		case 's':
 			mode_stress = 1;
 			break;
@@ -35,7 +39,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (!(mode_stress ^ mode_connect)) {
+	if (!(mode_stress ^ mode_connect ^ mode_load)) {
 		fprintf(stderr, "Usage %s [-s | -c] {-i ip (default: 127.0.0.1)} {-e extension}\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
@@ -47,6 +51,10 @@ int main(int argc, char *argv[])
 
 	if (mode_connect) {
 		ret = sccpp_test_connect(ip, SCCP_PORT);
+	}
+
+	if (mode_load) {
+		ret = sccpp_test_load(ip, SCCP_PORT);
 	}
 
 	return ret;

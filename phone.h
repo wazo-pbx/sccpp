@@ -3,12 +3,15 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #define SCCP_MAX_PACKET_SZ 2000
 struct sccp_session {
 	int sockfd;
 	char inbuf[SCCP_MAX_PACKET_SZ];
 	char outbuf[SCCP_MAX_PACKET_SZ];
+
+	pthread_t thread;
 };
 
 struct phone {
@@ -29,12 +32,14 @@ struct phone {
 	uint32_t secondaryKeepAlive;
 
 	char exten[15];
+
+	uint32_t remote_rtp_port;
 };
 
 struct phone *phone_new(char name[16],
                 uint32_t userId,
                 uint32_t instance,
-                uint32_t ip,
+                char *ip,
                 uint32_t type,
                 uint32_t maxStreams,
                 uint32_t activeStreams,

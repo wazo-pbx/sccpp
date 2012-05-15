@@ -8,6 +8,7 @@
 
 #include "message.h"
 #include "sccpp.h"
+#include "rtp.h"
 #include "utils.h"
 
 struct sccp_msg *msg_alloc(size_t data_length, int message_id)
@@ -38,7 +39,7 @@ int transmit_message(struct sccp_msg *msg, struct sccp_session *session)
 		fprintf(stderr, "Message transmit failed %s\n", strerror(errno));
 	}
 
-	free(msg);
+	//free(msg);
 
 	return nbyte;
 }
@@ -207,6 +208,63 @@ int transmit_button_template_req_message(struct phone *phone)
 	struct sccp_msg *msg;
 
 	msg = msg_alloc(0, BUTTON_TEMPLATE_REQ_MESSAGE);
+	if (msg == NULL)
+		return -1;
+
+	ret = transmit_message(msg, phone->session);
+	if (ret == -1)
+		return -1;
+
+	return 0;
+}
+
+int transmit_keep_alive_message(struct phone *phone)
+{
+	int ret = 0;
+	struct sccp_msg *msg;
+
+	msg = msg_alloc(0, KEEP_ALIVE_MESSAGE);
+	if (msg == NULL)
+		return -1;
+
+	ret = transmit_message(msg, phone->session);
+	if (ret == -1)
+		return -1;
+
+	return 0;
+}
+
+int transmit_open_receive_channel_ack_message(struct phone *phone)
+{
+	int ret = 0;
+	struct sccp_msg *msg;
+
+	msg = msg_alloc(sizeof(struct open_receive_channel_ack_message), OPEN_RECEIVE_CHANNEL_ACK_MESSAGE);
+	if (msg == NULL)
+		return -1;
+
+	msg->data.openreceivechannelack.status = htolel(1);
+	msg->data.openreceivechannelack.ipAddr = letohl(phone->ip);
+	msg->data.openreceivechannelack.port = htolel(1001);
+	msg->data.openreceivechannelack.passThruId = htolel(999);
+
+	ret = transmit_message(msg, phone->session);
+	if (ret == -1)
+		return -1;
+
+	pthread_t thread_recv;
+	pthread_create(&thread_recv, NULL, start_rtp_recv, NULL);
+
+	return 0;
+
+}
+
+int transmit_start_media_transmission_ack_message(struct phone *phone)
+{
+	int ret = 0;
+	struct sccp_msg *msg;
+
+	msg = msg_alloc(0, START_MEDIA_TRANSMISSION_ACK_MESSAGE);
 	if (msg == NULL)
 		return -1;
 

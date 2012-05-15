@@ -467,5 +467,8 @@ int transmit_line_status_req_message(struct phone *phone);
 int transmit_softkey_set_req_message(struct phone *phone);
 int transmit_softkey_template_req_message(struct phone *phone);
 int transmit_button_template_req_message(struct phone *phone);
+int transmit_open_receive_channel_ack_message(struct phone *phone);
+int transmit_start_media_transmission_ack_message(struct phone *phone);
+int transmit_keep_alive_message(struct phone *phone);
 
 #endif /* SCCP_MESSAGE_H */

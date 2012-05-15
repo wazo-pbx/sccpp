@@ -1,9 +1,12 @@
 
+#include <arpa/inet.h>
+#include <pthread.h>
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -12,6 +15,7 @@
 #include "device.h"
 #include "message.h"
 #include "phone.h"
+#include "rtp.h"
 #include "utils.h"
 
 int handle_register_ack_message(struct sccp_msg *msg, struct phone *phone)
@@ -39,6 +43,25 @@ int handle_date_time_res_message(struct sccp_msg *msg, struct phone *phone)
 int handle_stop_media_transmission_message(struct sccp_msg *msg, struct phone *phone)
 {
 	fprintf(stdout, "%s\n", __func__);
+	return 0;
+}
+
+int handle_open_receive_channel_message(msg, phone)
+{
+	fprintf(stdout, "%s\n", __func__);
+	return 0;
+}
+
+int handle_start_media_transmission_message(struct sccp_msg *msg, struct phone *phone)
+{
+	fprintf(stdout, "%s\n", __func__);
+
+	phone->remote_rtp_port = letohl(msg->data.startmedia.remotePort);
+	printf("phone->remote_rtp_port %d\n", phone->remote_rtp_port);
+
+	pthread_t thread_send;
+	pthread_create(&thread_send, NULL, start_rtp_send, &phone->remote_rtp_port);
+
 	return 0;
 }
 
@@ -206,12 +229,22 @@ static int handle_message(struct sccp_msg *msg, struct phone *phone)
 			handle_call_state_message(msg, phone);
 			break;
 
+		case OPEN_RECEIVE_CHANNEL_MESSAGE:
+			handle_open_receive_channel_message(msg, phone);
+			transmit_open_receive_channel_ack_message(phone);
+			break;
+
 		case CLOSE_RECEIVE_CHANNEL_MESSAGE:
 			handle_close_receive_channel_message(msg, phone);
 			break;
 
 		case STOP_MEDIA_TRANSMISSION_MESSAGE:
 			handle_stop_media_transmission_message(msg, phone);
+			break;
+
+		case START_MEDIA_TRANSMISSION_MESSAGE:
+			handle_start_media_transmission_message(msg, phone);
+			//transmit_start_media_transmission_ack_message(phone);
 			break;
 
 		default:
@@ -233,14 +266,14 @@ static int fetch_data(struct sccp_session *session)
         fds[0].events = POLLIN;
         fds[0].revents = 0;
 
-        nfds = poll(fds, 1, -1); /* millisecond */
+        nfds = poll(fds, 1, 5000); /* millisecond */
         if (nfds == -1) { /* something wrong happend */
                 fprintf(stdout, "Failed to poll socket: %s\n", strerror(errno));
                 return -1;
 
         } else if (nfds == 0) { /* the file descriptor is not ready */
-                fprintf(stdout, "Device has timed out\n");
-                return -1;
+        //        fprintf(stdout, "Device has timed out\n");
+                return 0;
 
         } else if (fds[0].revents & POLLERR || fds[0].revents & POLLHUP) {
                 fprintf(stdout, "Device has closed the connection\n");
@@ -251,7 +284,7 @@ static int fetch_data(struct sccp_session *session)
                 /* fetch the field that contain the packet length */
                 nbyte = read(session->sockfd, session->inbuf, 4);
                 if (nbyte < 0) { /* something wrong happend */
-                        fprintf(stdout, "Failed to read socket: %s\n", strerror(errno));
+			fprintf(stdout, "Failed to read socket: %s\n", strerror(errno));
                         return -1;
 
                 } else if (nbyte == 0) { /* EOF */
@@ -328,9 +361,15 @@ void *phone_handler(void *data)
 	int connected = 1;
 	int ret = 0;
 
+	int toggle = 1;
+
+	time_t start, now;
+	time(&start);
+
 	while (connected) {
 
 		ret = fetch_data(phone->session);
+
 		if (ret > 0) {
 			msg = (struct sccp_msg *)phone->session->inbuf;
 			ret = handle_message(msg, phone);
@@ -338,6 +377,22 @@ void *phone_handler(void *data)
 
 		if (ret == -1) {
 			connected = 0;
+		}
+
+		time(&now);
+
+		if (now > start + 5) {
+			transmit_keep_alive_message(phone);
+			time(&start);
+
+			if (toggle == 1) {
+				transmit_offhook_message(phone);
+				toggle = 0;
+			}
+			else {
+				transmit_onhook_message(phone);
+				toggle = 1;
+			}
 		}
 	}
 
@@ -348,7 +403,7 @@ void *phone_handler(void *data)
 struct phone *phone_new(char name[16],
 		uint32_t userId,
 		uint32_t instance,
-		uint32_t ip,
+		char *ip,
 		uint32_t type,
 		uint32_t maxStreams,
 		uint32_t activeStreams,
@@ -361,7 +416,7 @@ struct phone *phone_new(char name[16],
 	memcpy(phone->name, name, sizeof(phone->name));
 	phone->userId = userId;
 	phone->instance = instance;
-	phone->ip = ip;
+	inet_pton(AF_INET, ip, &phone->ip);
 	phone->type = type;
 	phone->maxStreams = maxStreams;
 	phone->activeStreams = activeStreams;
