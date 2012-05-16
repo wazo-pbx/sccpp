@@ -61,17 +61,19 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	rtp_init();
+
 	if (mode_stress) { /* Experimental */
 		printf("exten %s\n", exten);
-		ret = sccpp_test_stress(remote_ip, SCCP_PORT, exten);
+		ret = sccpp_test_stress(local_ip, remote_ip, SCCP_PORT, exten);
 	}
 
 	if (mode_connect) {
-		ret = sccpp_test_connect(remote_ip, SCCP_PORT, exten);
+		ret = sccpp_test_connect(local_ip, remote_ip, SCCP_PORT, exten);
 	}
 
 	if (mode_load) {
-		ret = sccpp_test_load(local_ip, remote_ip, SCCP_PORT, thread);
+		ret = sccpp_test_load(local_ip, remote_ip, SCCP_PORT, thread, exten);
 	}
 
 	return ret;

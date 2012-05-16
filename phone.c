@@ -47,7 +47,7 @@ int handle_stop_media_transmission_message(struct sccp_msg *msg, struct phone *p
 	return 0;
 }
 
-int handle_open_receive_channel_message(msg, phone)
+int handle_open_receive_channel_message(struct sccp_msg *msg, struct phone *phone)
 {
 	fprintf(stdout, "%s\n", __func__);
 	return 0;
@@ -358,6 +358,7 @@ struct sccp_session *session_new(char *ip, char *port)
 
 	return session;
 }
+
 void *phone_handler(void *data)
 {
 	struct phone *phone = data;
@@ -389,18 +390,18 @@ void *phone_handler(void *data)
 
 			transmit_keep_alive_message(phone);
 			time(&start);
-/*
+
 			if (toggle == 1) {
 				transmit_offhook_message(phone);
 				usleep(500);
-				do_dial_extension(phone, "*10");
+				do_dial_extension(phone, phone->exten);
 				toggle = 0;
 			}
 			else {
 				transmit_onhook_message(phone);
 				toggle = 1;
 			}
-*/
+
 		}
 	}
 
@@ -411,11 +412,13 @@ void *phone_handler(void *data)
 struct phone *phone_new(char name[16],
 		uint32_t userId,
 		uint32_t instance,
-		char *ip,
+		char *local_ip,
+		char *remote_ip,
 		uint32_t type,
 		uint32_t maxStreams,
 		uint32_t activeStreams,
-		uint8_t protoVersion)
+		uint8_t protoVersion,
+		char *exten)
 {
 
 	struct phone *phone = NULL;
@@ -424,11 +427,16 @@ struct phone *phone_new(char name[16],
 	memcpy(phone->name, name, sizeof(phone->name));
 	phone->userId = userId;
 	phone->instance = instance;
-	inet_pton(AF_INET, ip, &phone->ip);
+
+	phone->local_ip = strdup(local_ip);
+	phone->remote_ip = strdup(remote_ip);
+
 	phone->type = type;
 	phone->maxStreams = maxStreams;
 	phone->activeStreams = activeStreams;
 	phone->protoVersion = protoVersion;
+
+	strcpy(phone->exten, exten);
 
 	return phone;
 }

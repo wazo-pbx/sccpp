@@ -4,6 +4,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <arpa/inet.h>
+
 #include <pthread.h>
 
 #include "message.h"
@@ -53,10 +55,13 @@ int transmit_register_message(struct phone *phone)
 	if (msg == NULL)
 		return -1;
 
+	uint32_t ip;
+	inet_pton(AF_INET, phone->local_ip, &ip);
+
 	memcpy(msg->data.reg.name, phone->name, sizeof(msg->data.reg.name));
 	msg->data.reg.userId = htolel(phone->userId);
 	msg->data.reg.instance = htolel(phone->instance);
-	msg->data.reg.ip = letohl(phone->ip);
+	msg->data.reg.ip = letohl(ip);
 	msg->data.reg.type = htolel(phone->type);
 	msg->data.reg.maxStreams = htolel(phone->maxStreams);
 	msg->data.reg.protoVersion = htolel(phone->protoVersion);
@@ -245,8 +250,11 @@ int transmit_open_receive_channel_ack_message(struct phone *phone)
 	if (msg == NULL)
 		return -1;
 
+	uint32_t ip;
+	inet_pton(AF_INET, phone->local_ip, &ip);
+
 	msg->data.openreceivechannelack.status = htolel(1);
-	msg->data.openreceivechannelack.ipAddr = letohl(phone->ip);
+	msg->data.openreceivechannelack.ipAddr = letohl(ip);
 	msg->data.openreceivechannelack.port = htolel(port);
 	msg->data.openreceivechannelack.passThruId = htolel(999);
 

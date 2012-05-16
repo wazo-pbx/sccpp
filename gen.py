@@ -21,7 +21,9 @@ while (count < 500):
  sccp.write('[' + str(line_instance) + ']\n')
  sccp.write('cid_num=' + str(line_instance) + '\n')
  sccp.write('cid_name=' + ''.join(random.choice(string.ascii_lowercase) for _ in xrange(5)) + '\n')
+ sccp.write('language=fr_CA\n')
  sccp.write('\n')
+
  line_instance += 1
  count += 1 
 

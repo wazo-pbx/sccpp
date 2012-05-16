@@ -21,7 +21,6 @@ struct phone {
 	char name[16];
 	uint32_t userId;
 	uint32_t instance;
-	uint32_t ip;
 	uint32_t type;
 	uint32_t maxStreams;
 	uint32_t activeStreams;
@@ -32,6 +31,8 @@ struct phone {
 	uint32_t secondaryKeepAlive;
 
 	char exten[15];
+	char *remote_ip;
+	char *local_ip;
 
 	uint32_t remote_rtp_port;
 	uint32_t local_rtp_port;
@@ -43,11 +44,13 @@ struct phone {
 struct phone *phone_new(char name[16],
                 uint32_t userId,
                 uint32_t instance,
-                char *ip,
+                char *local_ip,
+		char *remote_ip,
                 uint32_t type,
                 uint32_t maxStreams,
                 uint32_t activeStreams,
-                uint8_t protoVersion);
+                uint8_t protoVersion,
+		char *exten);
 
 int phone_register(struct phone *phone);
 void *phone_handler(void *data);

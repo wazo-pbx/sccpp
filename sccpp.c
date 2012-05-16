@@ -28,10 +28,20 @@ void do_dial_extension(struct phone *phone, char *exten)
 {
 	int exten_len = 0;
 	int i;
+	int digit;
 
 	exten_len = strlen(exten);
 	for (i = 0; i < exten_len; i++) {
-		transmit_keypad_button_message(phone, exten[i] - 48);
+
+		if (exten[i] == '*') {
+			digit = 14;
+		} else if (exten[i] == '#') {
+			digit = 15;
+		} else {
+			digit = exten[i] - 48;
+		}
+
+		transmit_keypad_button_message(phone, digit);
 	}
 }
 
@@ -58,12 +68,12 @@ void *caller(void *data)
 	}
 }
 
-int sccpp_test_stress(char *ip, char *port, char *exten)
+int sccpp_test_stress(char *local_ip, char *remote_ip, char *remote_port, char *exten)
 {
 	/**** PHONE 1 */
 	struct phone *c7940 = NULL;
-	c7940 = phone_new("SEP001AA289341A", 0, 1, "10.97.8.1", SCCP_DEVICE_7940, 0, 0, 0);
-	c7940->session = session_new(ip, port);
+	c7940 = phone_new("SEP001AA289341A", 0, 1, local_ip, remote_ip, SCCP_DEVICE_7940, 0, 0, 0, exten);
+	c7940->session = session_new(remote_ip, remote_port);
 
 	if (c7940->session == NULL) {
 		fprintf(stdout, "can't create a new session\n");
@@ -80,8 +90,8 @@ int sccpp_test_stress(char *ip, char *port, char *exten)
 
 	/**** PHONE 2 */
 	struct phone *d7940 = NULL;
-	d7940 = phone_new("SEP001AA289341B", 0, 1, "10.97.8.1", SCCP_DEVICE_7940, 0, 0, 0);
-	d7940->session = session_new(ip, port);
+	d7940 = phone_new("SEP001AA289341B", 0, 1, local_ip, remote_ip, SCCP_DEVICE_7940, 0, 0, 0, exten);
+	d7940->session = session_new(remote_ip, remote_port);
 
 	if (d7940->session == NULL) {
 		fprintf(stdout, "can't create a new session\n");
@@ -101,13 +111,15 @@ int sccpp_test_stress(char *ip, char *port, char *exten)
 	return 0;
 }
 
-int sccpp_test_connect(char *ip, char *port, char *exten)
+int sccpp_test_connect(char *local_ip, char *remote_ip, char *remote_port, char *exten)
 {
 	struct phone *c7940 = NULL;
 	pthread_t thread;
 
-	c7940 = phone_new("SEP001AA289341A", 0, 1, "10.97.8.1",  369, 0, 0, 0);
-	c7940->session = session_new(ip, port);
+	c7940 = phone_new("SEP64AE0C5F9718", 0, 1, local_ip, remote_ip, 369, 0, 0, 0, exten);
+
+	//c7940 = phone_new("SEP00163E0BBA63", 0, 1, local_ip, remote_ip, 369, 0, 0, 0, new);
+	c7940->session = session_new(remote_ip, remote_port);
 
 	if (c7940->session == NULL) {
 		fprintf(stdout, "can't create a new session\n");
@@ -121,9 +133,10 @@ int sccpp_test_connect(char *ip, char *port, char *exten)
 	phone_register(c7940);
 
 	/* wait for the registration to be established */
-	sleep(3);
+	sleep(2);
 
 	transmit_offhook_message(c7940);
+	sleep(2);
 	do_dial_extension(c7940, exten);
 /*
 	sleep(3);
@@ -133,7 +146,7 @@ int sccpp_test_connect(char *ip, char *port, char *exten)
 	return 0;
 }
 
-int sccpp_test_load(char *local_ip, char *server_ip, char *server_port, int thread)
+int sccpp_test_load(char *local_ip, char *remote_ip, char *remote_port, int thread, char *exten)
 {
 	struct phone *c7940 = NULL;
 
@@ -175,8 +188,8 @@ int sccpp_test_load(char *local_ip, char *server_ip, char *server_port, int thre
 				line++;
 			}
 
-			c7940 = phone_new(mac, userId, instance, local_ip, type, maxStreams, activeStreams, protoVersion);
-			c7940->session = session_new(server_ip, server_port);
+			c7940 = phone_new(mac, userId, instance, local_ip, remote_ip, type, maxStreams, activeStreams, protoVersion, exten);
+			c7940->session = session_new(remote_ip, remote_port);
 
 			pthread_create(&c7940->session->thread, &attr, phone_handler, c7940);
 			phone_register(c7940);
