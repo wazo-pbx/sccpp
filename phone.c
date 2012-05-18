@@ -62,8 +62,12 @@ int handle_start_media_transmission_message(struct sccp_msg *msg, struct phone *
 	printf("phone->remote_rtp_port %d\n", phone->remote_rtp_port);
 	phone->rtp_send = 1;
 
+	pthread_attr_t attr;
+	pthread_attr_init(&attr);
+	pthread_attr_setstacksize(&attr, 0x82400);
+
 	pthread_t thread_send;
-	pthread_create(&thread_send, NULL, start_rtp_send, phone);
+	pthread_create(&thread_send, &attr, start_rtp_send, phone);
 
 	return 0;
 }

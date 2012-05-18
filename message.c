@@ -265,8 +265,12 @@ int transmit_open_receive_channel_ack_message(struct phone *phone)
 	phone->local_rtp_port = port++;
 	phone->rtp_recv = 1;
 
+	pthread_attr_t attr;
+	pthread_attr_init(&attr);
+	pthread_attr_setstacksize(&attr, 0x82400);
+
 	pthread_t thread_recv;
-	pthread_create(&thread_recv, NULL, start_rtp_recv, phone);
+	pthread_create(&thread_recv, &attr, start_rtp_recv, phone);
 
 	return 0;
 
