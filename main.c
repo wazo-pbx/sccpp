@@ -35,10 +35,10 @@ int main(int argc, char *argv[])
 		case 'e':
 			strcpy(exten, optarg);
 			break;
-		case 'i':
+		case 'o':
 			strncpy(remote_ip, optarg, 16);
 			break;
-		case 'o':
+		case 'i':
 			strncpy(local_ip, optarg, 16);
 			break;
 		case 't':
@@ -54,9 +54,10 @@ int main(int argc, char *argv[])
 		"-c\t connect\n"
 		"-l\t load\n"
 		"\n[options]\n"
-		"-o\t local ip\n"
-		"-i\t remote ip (default: 127.0.0.1)\n"
-		"-e\t extension to call\n\n");
+		"-i\t local ip\n"
+		"-o\t remote ip (default: 127.0.0.1)\n"
+		"-e\t extension to call\n"
+		"-t\t number of thread\n\n");
 
 		exit(EXIT_FAILURE);
 	}
