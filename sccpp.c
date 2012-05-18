@@ -68,11 +68,11 @@ void *caller(void *data)
 	}
 }
 
-int sccpp_test_stress(char *local_ip, char *remote_ip, char *remote_port, char *exten)
+int sccpp_test_stress(char *local_ip, char *remote_ip, char *remote_port, char *exten, int duration)
 {
 	/**** PHONE 1 */
 	struct phone *c7940 = NULL;
-	c7940 = phone_new("SEP001AA289341A", 0, 1, local_ip, remote_ip, SCCP_DEVICE_7940, 0, 0, 0, exten);
+	c7940 = phone_new("SEP001AA289341A", 0, 1, local_ip, remote_ip, SCCP_DEVICE_7940, 0, 0, 0, exten, duration);
 	c7940->session = session_new(remote_ip, remote_port);
 
 	if (c7940->session == NULL) {
@@ -90,7 +90,7 @@ int sccpp_test_stress(char *local_ip, char *remote_ip, char *remote_port, char *
 
 	/**** PHONE 2 */
 	struct phone *d7940 = NULL;
-	d7940 = phone_new("SEP001AA289341B", 0, 1, local_ip, remote_ip, SCCP_DEVICE_7940, 0, 0, 0, exten);
+	d7940 = phone_new("SEP001AA289341B", 0, 1, local_ip, remote_ip, SCCP_DEVICE_7940, 0, 0, 0, exten, duration);
 	d7940->session = session_new(remote_ip, remote_port);
 
 	if (d7940->session == NULL) {
@@ -111,12 +111,12 @@ int sccpp_test_stress(char *local_ip, char *remote_ip, char *remote_port, char *
 	return 0;
 }
 
-int sccpp_test_connect(char *local_ip, char *remote_ip, char *remote_port, char *exten)
+int sccpp_test_connect(char *local_ip, char *remote_ip, char *remote_port, char *exten, int duration)
 {
 	struct phone *c7940 = NULL;
 	pthread_t thread;
 
-	c7940 = phone_new("SEP64AE0C5F9718", 0, 1, local_ip, remote_ip, 369, 0, 0, 0, exten);
+	c7940 = phone_new("SEP64AE0C5F9718", 0, 1, local_ip, remote_ip, 369, 0, 0, 0, exten, duration);
 
 	//c7940 = phone_new("SEP00163E0BBA63", 0, 1, local_ip, remote_ip, 369, 0, 0, 0, new);
 	c7940->session = session_new(remote_ip, remote_port);
@@ -146,7 +146,7 @@ int sccpp_test_connect(char *local_ip, char *remote_ip, char *remote_port, char 
 	return 0;
 }
 
-int sccpp_test_load(char *local_ip, char *remote_ip, char *remote_port, int thread, char *exten)
+int sccpp_test_load(char *local_ip, char *remote_ip, char *remote_port, int thread, char *exten, int duration)
 {
 	struct phone *c7940 = NULL;
 
@@ -188,7 +188,9 @@ int sccpp_test_load(char *local_ip, char *remote_ip, char *remote_port, int thre
 				line++;
 			}
 
-			c7940 = phone_new(mac, userId, instance, local_ip, remote_ip, type, maxStreams, activeStreams, protoVersion, exten);
+			c7940 = phone_new(mac, userId, instance, local_ip, remote_ip, type,
+					maxStreams, activeStreams, protoVersion, exten, duration);
+
 			c7940->session = session_new(remote_ip, remote_port);
 
 			pthread_create(&c7940->session->thread, &attr, phone_handler, c7940);

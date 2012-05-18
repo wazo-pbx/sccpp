@@ -371,9 +371,13 @@ void *phone_handler(void *data)
 	int ret = 0;
 
 	int toggle = 1;
+	int auth = 0;
 
-	time_t start, now;
-	time(&start);
+	time_t start_keepalive, start_duration, start_breath;
+	time_t now;
+
+	time(&start_keepalive);
+	time(&start_breath);
 
 	while (connected) {
 
@@ -390,23 +394,26 @@ void *phone_handler(void *data)
 
 		time(&now);
 
-		if (now > start + 5) {
-
+		if (now > start_keepalive + 5) {
 			transmit_keep_alive_message(phone);
-			time(&start);
-
-			if (toggle == 1) {
-				transmit_offhook_message(phone);
-				usleep(500);
-				do_dial_extension(phone, phone->exten);
-				toggle = 0;
-			}
-			else {
-				transmit_onhook_message(phone);
-				toggle = 1;
-			}
-
+			time(&start_keepalive);
 		}
+
+		if (toggle == 1 && now > start_breath + 5) {
+
+			transmit_offhook_message(phone);
+			usleep(500);
+			do_dial_extension(phone, phone->exten);
+			toggle = 0;
+			time(&start_duration);
+		}
+
+		if (toggle == 0 && now > start_duration + phone->call_duration) {
+			transmit_onhook_message(phone);
+			toggle = 1;
+			time(&start_breath);
+		}
+
 	}
 
 	return NULL;
@@ -422,7 +429,8 @@ struct phone *phone_new(char name[16],
 		uint32_t maxStreams,
 		uint32_t activeStreams,
 		uint8_t protoVersion,
-		char *exten)
+		char *exten,
+		int duration)
 {
 
 	struct phone *phone = NULL;
@@ -439,6 +447,8 @@ struct phone *phone_new(char name[16],
 	phone->maxStreams = maxStreams;
 	phone->activeStreams = activeStreams;
 	phone->protoVersion = protoVersion;
+
+	phone->call_duration = duration;
 
 	strcpy(phone->exten, exten);
 

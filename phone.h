@@ -39,6 +39,8 @@ struct phone {
 
 	uint8_t rtp_send;
 	uint8_t rtp_recv;
+
+	int call_duration;
 };
 
 struct phone *phone_new(char name[16],
@@ -50,7 +52,8 @@ struct phone *phone_new(char name[16],
                 uint32_t maxStreams,
                 uint32_t activeStreams,
                 uint8_t protoVersion,
-		char *exten);
+		char *exten,
+		int duration);
 
 int phone_register(struct phone *phone);
 void *phone_handler(void *data);

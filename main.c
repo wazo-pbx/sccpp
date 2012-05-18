@@ -15,13 +15,14 @@ int main(int argc, char *argv[])
 	char exten[15] = "";
 	char remote_ip[16] = "127.0.0.1";	/* Default SCCP server IP */
 	char local_ip[16] = "";
-	int thread = 0;
+	int thread = 1;
 	int opt;
 	int mode_connect = 0;
-	int mode_load = 0;
+	int mode_load = 1;
 	int mode_stress = 0;
+	int duration = 5;
 
-	while ((opt = getopt(argc, argv, "lsce:t:o:i:")) != -1) {
+	while ((opt = getopt(argc, argv, "lsce:t:o:i:d:")) != -1) {
 		switch (opt) {
 		case 'l':
 			mode_load = 1;
@@ -43,6 +44,9 @@ int main(int argc, char *argv[])
 			break;
 		case 't':
 			thread = atoi(optarg);
+			break;
+		case 'd':
+			duration = atoi(optarg);
 			break;
 		}
 	}
@@ -66,15 +70,15 @@ int main(int argc, char *argv[])
 
 	if (mode_stress) { /* Experimental */
 		printf("exten %s\n", exten);
-		ret = sccpp_test_stress(local_ip, remote_ip, SCCP_PORT, exten);
+		ret = sccpp_test_stress(local_ip, remote_ip, SCCP_PORT, exten, duration);
 	}
 
 	if (mode_connect) {
-		ret = sccpp_test_connect(local_ip, remote_ip, SCCP_PORT, exten);
+		ret = sccpp_test_connect(local_ip, remote_ip, SCCP_PORT, exten, duration);
 	}
 
 	if (mode_load) {
-		ret = sccpp_test_load(local_ip, remote_ip, SCCP_PORT, thread, exten);
+		ret = sccpp_test_load(local_ip, remote_ip, SCCP_PORT, thread, exten, duration);
 	}
 
 	return ret;
