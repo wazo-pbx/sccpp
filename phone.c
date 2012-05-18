@@ -256,7 +256,7 @@ static int handle_message(struct sccp_msg *msg, struct phone *phone)
 			break;
 
 		default:
-			fprintf(stdout, "Unknown message %x\n", msg->id);
+			//fprintf(stdout, "Unknown message %x\n", msg->id);
 			break;
 	}
 
