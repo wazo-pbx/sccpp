@@ -66,6 +66,8 @@ void *caller(void *data)
 
 		transmit_onhook_message(phone);
 	}
+
+	free(exten);
 }
 
 int sccpp_test_stress(char *local_ip, char *remote_ip, char *remote_port, char *exten, int duration)
@@ -190,8 +192,9 @@ int sccpp_test_load(char *local_ip, char *remote_ip, char *remote_port, int thre
 
 			c7940 = phone_new(mac, userId, instance, local_ip, remote_ip, type,
 					maxStreams, activeStreams, protoVersion, exten, duration);
-
 			c7940->session = session_new(remote_ip, remote_port);
+			if (c7940->session == NULL)
+				return -1;
 
 			pthread_create(&c7940->session->thread, &attr, phone_handler, c7940);
 			phone_register(c7940);
@@ -204,6 +207,7 @@ int sccpp_test_load(char *local_ip, char *remote_ip, char *remote_port, int thre
 	} while (ret > 0 && ++i < thread);
 
 	fclose(f);
+	free(mac);
 
 	while(1) {sleep(1);}
 

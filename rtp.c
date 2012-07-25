@@ -54,16 +54,16 @@ void *start_rtp_recv(void *data)
 	unsigned char buffer[160];
 	uint32_t ts = 0;
 
-	int sound_fd;
+//	int sound_fd;
 
 	/* XXX use asound instead... */
 //	sound_fd = open("/dev/audio", O_WRONLY);
-
+/*
 	if (sound_fd == -1) {
 		printf("error can't open /dev/audio\n");
 		return NULL;
 	}
-
+*/
 	while (phone->rtp_recv) {
 
 		have_more = 1;
@@ -84,7 +84,7 @@ void *start_rtp_recv(void *data)
 		ts+=160;
 	}
 
-	close(sound_fd);
+	//close(sound_fd);
 
 	rtp_session_destroy(session);
 	ortp_global_stats_display();

@@ -33,6 +33,9 @@ int transmit_message(struct sccp_msg *msg, struct sccp_session *session)
 {
 	ssize_t nbyte;
 
+	if (msg == NULL)
+		return 0;
+
 	memcpy(session->outbuf, msg, 12);
 	memcpy(session->outbuf+12, &msg->data, letohl(msg->length));
 
@@ -41,7 +44,7 @@ int transmit_message(struct sccp_msg *msg, struct sccp_session *session)
 		fprintf(stderr, "Message transmit failed %s\n", strerror(errno));
 	}
 
-	//free(msg);
+	free(msg);
 
 	return nbyte;
 }

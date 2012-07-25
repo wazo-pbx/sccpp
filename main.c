@@ -8,6 +8,20 @@ extern char *optarg;
 extern int optind, opterr, optopt;
 #define SCCP_PORT "2000"
 
+void print_help()
+{
+    fprintf(stderr, "\nSCCP profiler usage\n\n"
+    "[mode]\n"
+    "-s\t stress\n"
+    "-c\t connect\n"
+    "-l\t load\n"
+    "\n[options]\n"
+    "-i\t local ip\n"
+    "-o\t remote ip (default: 127.0.0.1)\n"
+    "-e\t extension to call\n"
+    "-t\t number of thread\n\n");
+}
+
 int main(int argc, char *argv[])
 {
 	int ret = 0;
@@ -17,13 +31,17 @@ int main(int argc, char *argv[])
 	char local_ip[16] = "";
 	int thread = 1;
 	int opt;
+
 	int mode_connect = 0;
-	int mode_load = 1;
+	int mode_load = 0;
 	int mode_stress = 0;
 	int duration = 5;
 
-	while ((opt = getopt(argc, argv, "lsce:t:o:i:d:")) != -1) {
+	while ((opt = getopt(argc, argv, "hlsce:t:o:i:d:")) != -1) {
 		switch (opt) {
+		case 'h':
+			print_help();
+			exit(EXIT_FAILURE);
 		case 'l':
 			mode_load = 1;
 			break;
@@ -52,17 +70,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (!(mode_stress ^ mode_connect ^ mode_load)) {
-		fprintf(stderr, "\nSCCP profiler usage\n\n"
-		"[mode]\n"
-		"-s\t stress\n"
-		"-c\t connect\n"
-		"-l\t load\n"
-		"\n[options]\n"
-		"-i\t local ip\n"
-		"-o\t remote ip (default: 127.0.0.1)\n"
-		"-e\t extension to call\n"
-		"-t\t number of thread\n\n");
-
+		print_help();
 		exit(EXIT_FAILURE);
 	}
 
@@ -74,10 +82,12 @@ int main(int argc, char *argv[])
 	}
 
 	if (mode_connect) {
+		printf("mode connect...\n");
 		ret = sccpp_test_connect(local_ip, remote_ip, SCCP_PORT, exten, duration);
 	}
 
 	if (mode_load) {
+		printf("mode load...\n");
 		ret = sccpp_test_load(local_ip, remote_ip, SCCP_PORT, thread, exten, duration);
 	}
 
