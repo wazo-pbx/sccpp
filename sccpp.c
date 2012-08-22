@@ -129,7 +129,7 @@ int sccpp_test_connect(char *local_ip, char *remote_ip, char *remote_port, char 
 	}
 
 	/* start thread msg handler */
-	pthread_create(&thread, NULL, phone_handler, c7940);
+	pthread_create(&thread, NULL, phone_handler_connect, c7940);
 
 	/* fire registration */
 	phone_register(c7940);
@@ -150,7 +150,7 @@ int sccpp_test_connect(char *local_ip, char *remote_ip, char *remote_port, char 
 
 int sccpp_test_load(char *local_ip, char *remote_ip, char *remote_port, int thread, char *exten, int duration)
 {
-	struct phone *c7940 = NULL;
+    struct phone *c7940 = NULL;
 
 	char name[16];
 	uint32_t userId = 0;
@@ -175,10 +175,11 @@ int sccpp_test_load(char *local_ip, char *remote_ip, char *remote_port, int thre
 	mac = malloc(linesz + 1);
 
 	f = fopen("./sccp.conf.simple", "r");
-	if (f == NULL) {
-		fprintf(stderr, "./sccp.conf.simple not found\n");
-		return -1;
-	}
+    if (f == NULL) {
+        fprintf(stderr, "./sccp.conf.simple not found\n");
+        free(mac);
+        return -1;
+    }
 
 	do {
 		ret = getline(&mac, &linesz, f);

@@ -10,16 +10,16 @@ extern int optind, opterr, optopt;
 
 void print_help()
 {
-    fprintf(stderr, "\nSCCP profiler usage\n\n"
-    "[mode]\n"
-    "-s\t stress\n"
-    "-c\t connect\n"
-    "-l\t load\n"
-    "\n[options]\n"
-    "-i\t local ip\n"
-    "-o\t remote ip (default: 127.0.0.1)\n"
-    "-e\t extension to call\n"
-    "-t\t number of thread\n\n");
+	fprintf(stderr, "\nSCCP profiler usage\n\n"
+	"[mode]\n"
+	"-s\t stress\n"
+	"-c\t connect\n"
+	"-l\t load\n"
+	"\n[options]\n"
+	"-i\t local ip\n"
+	"-o\t remote ip (default: 127.0.0.1)\n"
+	"-e\t extension to call\n"
+	"-t\t number of thread\n\n");
 }
 
 int main(int argc, char *argv[])

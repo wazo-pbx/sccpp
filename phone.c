@@ -25,6 +25,8 @@ int handle_register_ack_message(struct sccp_msg *msg, struct phone *phone)
 	phone->dateTemplate = strdup(msg->data.regack.dateTemplate);
 	phone->secondaryKeepAlive = letohl(msg->data.regack.secondaryKeepAlive);
 
+	phone->auth = 1;
+
 	return 0;
 }
 
@@ -265,66 +267,66 @@ static int handle_message(struct sccp_msg *msg, struct phone *phone)
 
 static int fetch_data(struct sccp_session *session)
 {
-        struct pollfd fds[1] = {{0}};
-        int nfds = 0;
-        ssize_t nbyte = 0;
-        int msg_len = 0;
+	struct pollfd fds[1] = {{0}};
+	int nfds = 0;
+	ssize_t nbyte = 0;
+	int msg_len = 0;
 
-        fds[0].fd = session->sockfd;
-        fds[0].events = POLLIN;
-        fds[0].revents = 0;
+	fds[0].fd = session->sockfd;
+	fds[0].events = POLLIN;
+	fds[0].revents = 0;
 
-        nfds = poll(fds, 1, 5000); /* millisecond */
-        if (nfds == -1) { /* something wrong happend */
-                fprintf(stdout, "Failed to poll socket: %s\n", strerror(errno));
-                return -1;
+	nfds = poll(fds, 1, 5000); /* millisecond */
+	if (nfds == -1) { /* something wrong happend */
+		fprintf(stdout, "Failed to poll socket: %s\n", strerror(errno));
+		return -1;
 
-        } else if (nfds == 0) { /* the file descriptor is not ready */
-        //        fprintf(stdout, "Device has timed out\n");
-                return 0;
+	} else if (nfds == 0) { /* the file descriptor is not ready */
+		fprintf(stdout, "Device has timed out\n");
+		return 0;
 
-        } else if (fds[0].revents & POLLERR || fds[0].revents & POLLHUP) {
-                fprintf(stdout, "Device has closed the connection\n");
-                return -1;
+	} else if (fds[0].revents & POLLERR || fds[0].revents & POLLHUP) {
+		fprintf(stdout, "Device has closed the connection\n");
+		return -1;
 
-        } else if (fds[0].revents & POLLIN || fds[0].revents & POLLPRI) {
+	} else if (fds[0].revents & POLLIN || fds[0].revents & POLLPRI) {
 
-                /* fetch the field that contain the packet length */
-                nbyte = read(session->sockfd, session->inbuf, 4);
-                if (nbyte < 0) { /* something wrong happend */
+		/* fetch the field that contain the packet length */
+		nbyte = read(session->sockfd, session->inbuf, 4);
+		if (nbyte < 0) { /* something wrong happend */
 			fprintf(stdout, "Failed to read socket: %s\n", strerror(errno));
-                        return -1;
+			return -1;
 
-                } else if (nbyte == 0) { /* EOF */
-                        fprintf(stdout, "Device has closed the connection\n");
-                        return -1;
+		} else if (nbyte == 0) { /* EOF */
+			fprintf(stdout, "Device has closed the connection\n");
+			return -1;
 
-                } else if (nbyte < 4) {
-                        fprintf(stdout, "Client sent less data than expected. Expected at least 4 bytes but got %d\n", nbyte);
-                        return -1;
+		} else if (nbyte < 4) {
+			fprintf(stdout, "Client sent less data than expected. Expected at least 4 bytes but got %d\n", nbyte);
+			return -1;
 		}
 
-                msg_len = letohl(*((int *)session->inbuf));
-                if (msg_len > SCCP_MAX_PACKET_SZ || msg_len < 0) {
-                        fprintf(stdout, "Packet length is out of bounds: 0 > %d > %d\n", msg_len, SCCP_MAX_PACKET_SZ);
-                        return -1;
-                }
+		msg_len = letohl(*((int *)session->inbuf));
+		if (msg_len > SCCP_MAX_PACKET_SZ || msg_len < 0) {
+			fprintf(stdout, "Packet length is out of bounds: 0 > %d > %d\n", msg_len, SCCP_MAX_PACKET_SZ);
+			return -1;
+		}
 
-                /* bypass the length field and fetch the payload */
-                nbyte = read(session->sockfd, session->inbuf+4, msg_len+4);
-                if (nbyte < 0) {
+		/* bypass the length field and fetch the payload */
+		nbyte = read(session->sockfd, session->inbuf+4, msg_len+4);
+		if (nbyte < 0) {
 			fprintf(stdout, "Failed to read socket: %s\n", strerror(errno));
-                        return -1;
+			return -1;
 
-                } else if (nbyte == 0) { /* EOF */
-                        fprintf(stdout, "Device has closed the connection\n");
-                        return -1;
-                }
+		} else if (nbyte == 0) { /* EOF */
+			fprintf(stdout, "Device has closed the connection\n");
+			return -1;
+		}
 
-                return nbyte;
-        }
+		return nbyte;
+	}
 
-        return -1;
+	return -1;
 }
 
 struct sccp_session *session_new(char *ip, char *port)
@@ -361,6 +363,49 @@ struct sccp_session *session_new(char *ip, char *port)
 	}
 
 	return session;
+}
+
+void *phone_handler_connect(void *data)
+{
+	struct phone *phone = data;
+	struct sccp_msg *msg = NULL;
+	int connected = 1;
+	int ret = 0;
+	int toggle = 1;
+
+	time_t start, now;
+	time(&start);
+
+	while (connected) {
+		ret = fetch_data(phone->session);
+
+		if (ret > 0) {
+			msg = (struct sccp_msg *)phone->session->inbuf;
+			ret = handle_message(msg, phone);
+		}
+
+		if (ret == -1) {
+			connected = 0;
+		}
+
+		time(&now);
+
+		if (now > start + 5) {
+			printf("transmit keep alive\n");
+			transmit_keep_alive_message(phone);
+			time(&start);
+		}
+
+		if (phone->auth && toggle) {
+
+			transmit_offhook_message(phone);
+			usleep(500);
+			do_dial_extension(phone, phone->exten);
+			toggle = 0;
+		}
+	}
+
+	return NULL;
 }
 
 void *phone_handler(void *data)
