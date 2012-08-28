@@ -150,7 +150,7 @@ int sccpp_test_connect(char *local_ip, char *remote_ip, char *remote_port, char 
 
 int sccpp_test_load(char *local_ip, char *remote_ip, char *remote_port, int thread, char *exten, int duration)
 {
-    struct phone *c7940 = NULL;
+	struct phone *c7940 = NULL;
 
 	char name[16];
 	uint32_t userId = 0;
@@ -164,6 +164,7 @@ int sccpp_test_load(char *local_ip, char *remote_ip, char *remote_port, int thre
 	pthread_attr_t attr;
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, 0x82400);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
 	FILE *f = NULL;
 	char *mac, *line;
@@ -175,11 +176,11 @@ int sccpp_test_load(char *local_ip, char *remote_ip, char *remote_port, int thre
 	mac = malloc(linesz + 1);
 
 	f = fopen("./sccp.conf.simple", "r");
-    if (f == NULL) {
-        fprintf(stderr, "./sccp.conf.simple not found\n");
-        free(mac);
-        return -1;
-    }
+	if (f == NULL) {
+		fprintf(stderr, "./sccp.conf.simple not found\n");
+		free(mac);
+		return -1;
+	}
 
 	do {
 		ret = getline(&mac, &linesz, f);
@@ -207,6 +208,7 @@ int sccpp_test_load(char *local_ip, char *remote_ip, char *remote_port, int thre
 
 	} while (ret > 0 && ++i < thread);
 
+	pthread_attr_destroy(&attr);
 	fclose(f);
 	free(mac);
 

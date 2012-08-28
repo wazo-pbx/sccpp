@@ -67,9 +67,12 @@ int handle_start_media_transmission_message(struct sccp_msg *msg, struct phone *
 	pthread_attr_t attr;
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, 0x82400);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
 	pthread_t thread_send;
 	pthread_create(&thread_send, &attr, start_rtp_send, phone);
+
+	pthread_attr_destroy(&attr);
 
 	return 0;
 }
@@ -282,7 +285,6 @@ static int fetch_data(struct sccp_session *session)
 		return -1;
 
 	} else if (nfds == 0) { /* the file descriptor is not ready */
-		fprintf(stdout, "Device has timed out\n");
 		return 0;
 
 	} else if (fds[0].revents & POLLERR || fds[0].revents & POLLHUP) {

@@ -271,9 +271,12 @@ int transmit_open_receive_channel_ack_message(struct phone *phone)
 	pthread_attr_t attr;
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, 0x82400);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
 	pthread_t thread_recv;
 	pthread_create(&thread_recv, &attr, start_rtp_recv, phone);
+
+	pthread_attr_destroy(&attr);
 
 	return 0;
 
