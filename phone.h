@@ -57,6 +57,7 @@ struct phone *phone_new(char name[16],
 		char *exten,
 		int duration);
 
+void do_dial_extension(struct phone *phone, char *exten);
 int phone_register(struct phone *phone);
 void *phone_handler(void *data);
 void *phone_handler_connect(void *data);

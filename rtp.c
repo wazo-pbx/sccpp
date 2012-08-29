@@ -195,7 +195,7 @@ void *start_rtp_send(void *data)
 	unsigned char buffer[160];
 	int i;
 	FILE *infile;
-	int outfile;
+	//int outfile;
 	uint32_t user_ts=0;
 	int ret = 0;
 
@@ -205,7 +205,7 @@ void *start_rtp_send(void *data)
 	printf("start rtp send (%d)\n", phone->remote_rtp_port);
 
 	session = rtp_session_new(RTP_SESSION_SENDONLY);
-	printf("session %s\n", session);
+	//printf("session %s\n", session);
 
 	rtp_session_set_scheduling_mode(session, 1);
 	rtp_session_set_blocking_mode(session, 1);
@@ -228,7 +228,7 @@ void *start_rtp_send(void *data)
 
 	//init_mic();
 	//printf("size %d\n", size);
-	char buffer2[160];
+	//char buffer2[160];
 
 	while (phone->rtp_send) {
 

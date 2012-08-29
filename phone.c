@@ -367,6 +367,27 @@ struct sccp_session *session_new(char *ip, char *port)
 	return session;
 }
 
+void do_dial_extension(struct phone *phone, char *exten)
+{
+	int exten_len = 0;
+	int i;
+	int digit;
+
+	exten_len = strlen(exten);
+	for (i = 0; i < exten_len; i++) {
+
+		if (exten[i] == '*') {
+			digit = 14;
+		} else if (exten[i] == '#') {
+			digit = 15;
+		} else {
+			digit = exten[i] - 48;
+		}
+
+		transmit_keypad_button_message(phone, digit);
+	}
+}
+
 void *phone_handler_connect(void *data)
 {
 	struct phone *phone = data;
@@ -379,6 +400,7 @@ void *phone_handler_connect(void *data)
 	time(&start);
 
 	while (connected) {
+
 		ret = fetch_data(phone->session);
 
 		if (ret > 0) {
@@ -393,7 +415,6 @@ void *phone_handler_connect(void *data)
 		time(&now);
 
 		if (now > start + 5) {
-			printf("transmit keep alive\n");
 			transmit_keep_alive_message(phone);
 			time(&start);
 		}
@@ -401,8 +422,10 @@ void *phone_handler_connect(void *data)
 		if (phone->auth && toggle) {
 
 			transmit_offhook_message(phone);
+
 			usleep(500);
 			do_dial_extension(phone, phone->exten);
+
 			toggle = 0;
 		}
 	}
@@ -418,7 +441,7 @@ void *phone_handler(void *data)
 	int ret = 0;
 
 	int toggle = 1;
-	int auth = 0;
+	//int auth = 0;
 
 	time_t start_keepalive, start_duration, start_breath;
 	time_t now;
@@ -449,8 +472,10 @@ void *phone_handler(void *data)
 		if (toggle == 1 && now > start_breath + 5) {
 
 			transmit_offhook_message(phone);
+
 			usleep(500);
 			do_dial_extension(phone, phone->exten);
+
 			toggle = 0;
 			time(&start_duration);
 		}
@@ -460,12 +485,10 @@ void *phone_handler(void *data)
 			toggle = 1;
 			time(&start_breath);
 		}
-
 	}
 
 	return NULL;
 }
-
 
 struct phone *phone_new(char name[16],
 		uint32_t userId,

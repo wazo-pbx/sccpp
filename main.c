@@ -2,7 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
 #include "sccpp.h"
+#include "rtp.h"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -10,46 +12,53 @@ extern int optind, opterr, optopt;
 
 void print_help()
 {
-	fprintf(stderr, "\nSCCP profiler usage\n\n"
-	"[mode]\n"
-	"-s\t stress\n"
-	"-c\t connect\n"
-	"-l\t load\n"
-	"\n[options]\n"
-	"-i\t local ip\n"
-	"-o\t remote ip (default: 127.0.0.1)\n"
-	"-e\t extension to call\n"
-	"-t\t number of thread\n\n");
+	fprintf(stderr, "\nUsage:\n\n"
+	"sccpp [scenario] [options]\n\n"
+	"[scenarios]\n"
+	" -p\t softphone\n"
+	" -m\t mass call\n"
+	"\n"
+	"[options]\n"
+	" -i\t local ip\n"
+	" -o\t remote ip (default: 127.0.0.1)\n"
+	" -e\t extension to call\n"
+	" -t\t number of thread\n"
+	" -d\t call delay\n"
+	"\n"
+	"Example:\n\n"
+	"Launch 100 virtual phones, from 10.97.8.1 to 10.97.8.9\n"
+	"that will call the queue extension 3000 for 10sec every 5sec in loop:\n\n"
+	"./sccpp -m -i 10.97.8.1 -o 10.97.8.9 -e 3000 -t 100 -d 10\n\n");
 }
 
 int main(int argc, char *argv[])
 {
-	int ret = 0;
+	int scen_stress = 0;
+	int scen_softphone = 0;
+	int scen_mass_call = 0;
 
 	char exten[15] = "";
 	char remote_ip[16] = "127.0.0.1";	/* Default SCCP server IP */
 	char local_ip[16] = "";
-	int thread = 1;
-	int opt;
-
-	int mode_connect = 0;
-	int mode_load = 0;
-	int mode_stress = 0;
 	int duration = 5;
+	int thread = 1;
 
-	while ((opt = getopt(argc, argv, "hlsce:t:o:i:d:")) != -1) {
+	int opt = 0;
+	int ret = 0;
+
+	while ((opt = getopt(argc, argv, "hsmpe:t:o:i:d:")) != -1) {
 		switch (opt) {
 		case 'h':
 			print_help();
 			exit(EXIT_FAILURE);
-		case 'l':
-			mode_load = 1;
-			break;
 		case 's':
-			mode_stress = 1;
+			scen_stress = 1;
 			break;
-		case 'c':
-			mode_connect = 1;
+		case 'p':
+			scen_softphone = 1;
+			break;
+		case 'm':
+			scen_mass_call = 1;
 			break;
 		case 'e':
 			strcpy(exten, optarg);
@@ -69,26 +78,26 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (!(mode_stress ^ mode_connect ^ mode_load)) {
+	if (!(scen_stress ^ scen_softphone ^ scen_mass_call)) {
 		print_help();
 		exit(EXIT_FAILURE);
 	}
 
 	rtp_init();
 
-	if (mode_stress) { /* Experimental */
+	if (scen_stress) { /* Experimental */
 		printf("exten %s\n", exten);
-		ret = sccpp_test_stress(local_ip, remote_ip, SCCP_PORT, exten, duration);
+		ret = sccpp_scen_stress(local_ip, remote_ip, SCCP_PORT, exten, duration);
 	}
 
-	if (mode_connect) {
-		printf("mode connect...\n");
-		ret = sccpp_test_connect(local_ip, remote_ip, SCCP_PORT, exten, duration);
+	if (scen_softphone) {
+		printf("scenario softphone...\n");
+		ret = sccpp_scen_softphone(local_ip, remote_ip, SCCP_PORT, exten, duration);
 	}
 
-	if (mode_load) {
-		printf("mode load...\n");
-		ret = sccpp_test_load(local_ip, remote_ip, SCCP_PORT, thread, exten, duration);
+	if (scen_mass_call) {
+		printf("scenario mass call...\n");
+		ret = sccpp_scen_mass_call(local_ip, remote_ip, SCCP_PORT, thread, exten, duration);
 	}
 
 	return ret;
