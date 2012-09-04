@@ -2,7 +2,7 @@
 # sccpp 0.1
 ##
 
-CC=clang #gcc
+CC=gcc
 CFLAGS=-I /usr/include -Wall -g -pthread -D_REENTRANT -DORTP_INET6 -I/usr/local/include -L/usr/local/lib -lortp -lpthread -lasound
 DEPS = message.h utils.h phone.h
 OBJ = main.o sccpp.o message.o phone.o rtp.o
