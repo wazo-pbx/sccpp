@@ -1,0 +1,48 @@
+
+SCCP profiler
+--------------+
+
+Usage:
+
+sccpp [scenario] [options]
+
+[scenarios]
+ -p	 softphone
+ -c	 mass call
+ -a	 answer call
+
+[options]
+ -i	 local ip
+ -o	 remote ip (default: 127.0.0.1)
+ -e	 extension to call
+ -t	 number of thread
+ -d	 call delay
+ -s	 headset
+ -m	 mac address
+
+Example:
+
+Launch 20 virtual phones, from 10.97.8.1 to 10.97.8.9,
+that will call the queue extension 3000 for 10sec (then wait 5sec) in loop:
+
+./sccpp -c -i 10.97.8.1 -o 10.97.8.9 -e 3000 -t 20 -d 10
+
+--------------+
+:: The purpose of this tool is to simulate call scenario. 
+---------------------------------------------------------
+
+softphone:	initiate a call (usefull with the headset option).
+
+			./sccpp -p -i 10.97.8.1 -o 10.97.8.9 -e 1000 -s -m SEP00163E69AE69
+
+mass call:	spawn N thread (-t N) and call the extension.
+
+			./sccpp -c -i 10.97.8.1 -o 10.97.8.9 -e 3000 -t 10 -d 20
+
+			if you want to call a range you must use the -r option (1000+thread_N-1):
+
+			./sccpp -c -i 10.97.8.1 -o 10.97.8.9 -e 1000 -t 10 -d 20 -r
+
+answer call:	spawn N thread (-t N) and answer incoming call.
+
+			./sccpp -a -i 10.97.8.1 -o 10.97.8.9 -t 100
