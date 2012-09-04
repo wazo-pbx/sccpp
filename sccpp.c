@@ -92,12 +92,14 @@ int sccpp_scen_stress(char *local_ip, char *remote_ip, char *remote_port, char *
 	return 0;
 }
 
-int sccpp_scen_softphone(char *local_ip, char *remote_ip, char *remote_port, char *exten, int duration)
+int sccpp_scen_softphone(char *local_ip, char *remote_ip, char *remote_port, char *exten, int duration, char headset, char *macaddr)
 {
 	struct phone *c7940 = NULL;
 	pthread_t thread;
 
-	c7940 = phone_new("SEP64AE0C5F9718", 0, 1, local_ip, remote_ip, 369, 0, 0, 0, exten, duration);
+	c7940 = phone_new(macaddr, 0, 1, local_ip, remote_ip, 369, 0, 0, 0, exten, duration);
+	c7940->headset = headset;
+
 	c7940->session = session_new(remote_ip, remote_port);
 	if (c7940->session == NULL) {
 		fprintf(stderr, "can't create a new session\n");
@@ -107,15 +109,99 @@ int sccpp_scen_softphone(char *local_ip, char *remote_ip, char *remote_port, cha
 	pthread_create(&thread, NULL, phone_handler_connect, c7940);
 	phone_register(c7940);
 
-	sleep(1);
-	transmit_offhook_message(c7940);
-
-	sleep(1);
-	do_dial_extension(c7940, exten);
-
 	pthread_join(thread, NULL);
 
 	return 0;
+}
+
+int sccpp_scen_answer_call(char *local_ip, char *remote_ip, char *remote_port, int thread, int duration, char headset, char *macaddr)
+{
+	struct phone *c7940 = NULL;
+	pthread_t thread_answer;
+
+	c7940 = phone_new(macaddr, 0, 1, local_ip, remote_ip, 369, 0, 0, 0, "noexten", duration);
+	c7940->headset = headset;
+
+	c7940->session = session_new(remote_ip, remote_port);
+	if (c7940->session == NULL) {
+		fprintf(stderr, "can't create a new session\n");
+		return -1;
+	}
+
+	pthread_create(&thread_answer, NULL, phone_handler_answer, c7940);
+	phone_register(c7940);
+
+	pthread_join(thread_answer, NULL);
+
+	return 0;
+
+
+#if 0
+	struct phone *c7940 = NULL;
+
+	uint32_t userId = 0;
+	uint32_t instance = 1;
+
+	uint32_t type = 369;
+	uint32_t maxStreams = 0;
+	uint32_t activeStreams = 0;
+	uint8_t protoVersion = 0;
+
+	FILE *f = NULL;
+	char *mac, *line;
+	size_t linesz = 256;
+
+	int ret = 0;
+	int i = 0;
+
+	pthread_attr_t attr;
+	pthread_attr_init(&attr);
+	pthread_attr_setstacksize(&attr, 0x82400);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+	mac = malloc(linesz + 1);
+
+	f = fopen("./sccp.conf.simple", "r");
+	if (f == NULL) {
+		fprintf(stderr, "./sccp.conf.simple not found\n");
+		goto end;
+	}
+
+	do {
+		ret = getline(&mac, &linesz, f);
+		if (ret > 0) {
+			line = strchr(mac, ',');
+			if (line != NULL) {
+				*line = '\0';
+				line++;
+			}
+
+			c7940 = phone_new(mac, userId, instance, local_ip, remote_ip, type,
+					maxStreams, activeStreams, protoVersion, "noexten", duration);
+
+			c7940->session = session_new(remote_ip, remote_port);
+			if (c7940->session == NULL)
+				goto end;
+
+			pthread_create(&c7940->session->thread, &attr, phone_handler_answer, c7940);
+			phone_register(c7940);
+
+			usleep(300);
+			fprintf(stdout, "%s => %s", mac, line);
+		}
+
+	} while (ret > 0 && ++i < thread);
+
+	/* XXX catch signal */
+	while(1) {sleep(1);}
+
+end:
+	pthread_attr_destroy(&attr);
+	fclose(f);
+	free(mac);
+
+	return 0;
+#endif
 }
 
 int sccpp_scen_mass_call(char *local_ip, char *remote_ip, char *remote_port, int thread, char *exten, int duration)
@@ -159,7 +245,6 @@ int sccpp_scen_mass_call(char *local_ip, char *remote_ip, char *remote_port, int
 				line++;
 			}
 
-			/* XXX use a struct */
 			c7940 = phone_new(mac, userId, instance, local_ip, remote_ip, type,
 					maxStreams, activeStreams, protoVersion, exten, duration);
 

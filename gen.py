@@ -2,9 +2,11 @@
 
 import string
 import random
+import re
 
 sccp = open('sccp.conf', 'w')
 sccpsimple = open('sccp.conf.simple', 'w')
+sccpdial = open('sccp.dialplan', 'w')
 
 def randomMAC():
     mac = [ 0x00, 0x16, 0x3e,
@@ -13,7 +15,7 @@ def randomMAC():
         random.randint(0x00, 0xff) ]
     return ''.join(map(lambda x: "%02X" % x, mac))
 
-line_instance = 100
+line_instance = 1000
 count = 0
 
 sccp.write('[lines]\n')
@@ -28,8 +30,11 @@ while (count < 500):
  count += 1 
 
 
-line_instance = 100
+line_instance = 1000
 count = 0
+
+sccpdial.write('[xivo-extrafeatures]\n')
+sccpdial.write('[default]\n')
 
 sccp.write('[devices]\n')
 while (count < 500):
@@ -40,6 +45,9 @@ while (count < 500):
  sccp.write('\n')
 
  sccpsimple.write('SEP' + mac + ',' + str(line_instance) + '\n')
+
+ sccpdial.write('exten => ' + str(line_instance) + ',1,Dial(SCCP/' + str(line_instance) + ')\n');
+# sccpws.write('skaro-dev, f, l, fr_FR, ' + str(line_instance) + ', default, sccp, 0, 0, 0, ' + ':'.join(re.findall('..',mac))  + '\n');
 
  line_instance += 1
  count += 1

@@ -80,13 +80,15 @@ int handle_start_media_transmission_message(struct sccp_msg *msg, struct phone *
 int handle_close_receive_channel_message(struct sccp_msg *msg, struct phone *phone)
 {
 	fprintf(stdout, "%s\n", __func__);
-	phone->rtp_recv = 0;
+	//phone->rtp_recv = 0;
 	return 0;
 }
 
 int handle_call_state_message(struct sccp_msg *msg, struct phone *phone)
 {
 	fprintf(stdout, "%s\n", __func__);
+	printf("callstate: %d\n", msg->data.callstate.callState);
+	transmit_offhook_message(phone);
 	return 0;
 }
 
@@ -422,11 +424,46 @@ void *phone_handler_connect(void *data)
 		if (phone->auth && toggle) {
 
 			transmit_offhook_message(phone);
-
-			usleep(500);
+			sleep(2);
 			do_dial_extension(phone, phone->exten);
-
 			toggle = 0;
+		}
+	}
+
+	return NULL;
+}
+
+void *phone_handler_answer(void *data)
+{
+	struct phone *phone = data;
+	struct sccp_msg *msg = NULL;
+	int connected = 1;
+	int ret = 0;
+
+	time_t start_keepalive, start_breath;
+	time_t now;
+
+	time(&start_keepalive);
+	time(&start_breath);
+
+	while (connected) {
+
+		ret = fetch_data(phone->session);
+
+		if (ret > 0) {
+			msg = (struct sccp_msg *)phone->session->inbuf;
+			ret = handle_message(msg, phone);
+		}
+
+		if (ret == -1) {
+			connected = 0;
+		}
+
+		time(&now);
+
+		if (now > start_keepalive + 5) {
+			transmit_keep_alive_message(phone);
+			time(&start_keepalive);
 		}
 	}
 
@@ -509,6 +546,7 @@ struct phone *phone_new(char name[16],
 	memcpy(phone->name, name, sizeof(phone->name));
 	phone->userId = userId;
 	phone->instance = instance;
+	phone->headset = 0;
 
 	phone->local_ip = strdup(local_ip);
 	phone->remote_ip = strdup(remote_ip);

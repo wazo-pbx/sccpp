@@ -25,11 +25,12 @@ void rtp_init()
 
 void *start_rtp_recv(void *data)
 {
-	RtpSession *session;
+	RtpSession *session = NULL;
+	struct phone *phone = NULL;
+	int ret = 0;
 
-	int ret;
-	struct phone *phone;
 	phone = (struct phone *)data;
+	printf("phone->headset %d\n", phone->headset);
 
 	session = rtp_session_new(RTP_SESSION_RECVONLY);
 
@@ -54,16 +55,18 @@ void *start_rtp_recv(void *data)
 	unsigned char buffer[160];
 	uint32_t ts = 0;
 
-//	int sound_fd;
+	int sound_fd;
 
-	/* XXX use asound instead... */
-//	sound_fd = open("/dev/audio", O_WRONLY);
-/*
+	if (phone->headset) {
+		/* XXX use asound instead... */
+		sound_fd = open("/dev/audio", O_WRONLY);
+	}
+
 	if (sound_fd == -1) {
 		printf("error can't open /dev/audio\n");
 		return NULL;
 	}
-*/
+
 	while (phone->rtp_recv) {
 
 		have_more = 1;
@@ -75,7 +78,8 @@ void *start_rtp_recv(void *data)
 				stream_received = 1;
 
 			if (stream_received && err > 0) {
-				//ret = write(sound_fd, buffer, err);
+				if (phone->headset)
+					ret = write(sound_fd, buffer, err);
 				if (ret == -1) {
 					printf("error writing the sound device!\n");
 				}
@@ -84,7 +88,7 @@ void *start_rtp_recv(void *data)
 		ts+=160;
 	}
 
-	//close(sound_fd);
+	close(sound_fd);
 
 	rtp_session_destroy(session);
 	ortp_global_stats_display();
@@ -171,13 +175,9 @@ int read_mic(char *buffer)
 		snd_pcm_prepare(handle);
 
 	} else if (rc < 0) {
-
 		fprintf(stderr, "error from read: %s\n", snd_strerror(rc));
-
 	} else if (rc != (int)frames) {
-
 		fprintf(stderr, "short read, read %d frames\n", rc);
-
 	}
 
 	return rc;
@@ -191,12 +191,11 @@ void close_mic()
 
 void *start_rtp_send(void *data)
 {
-	RtpSession *session;
+	RtpSession *session = NULL;
 	unsigned char buffer[160];
-	int i;
-	FILE *infile;
-	//int outfile;
-	uint32_t user_ts=0;
+	int i = 0;
+	FILE *infile = NULL;
+	uint32_t user_ts = 0;
 	int ret = 0;
 
 	struct phone *phone;
@@ -205,7 +204,6 @@ void *start_rtp_send(void *data)
 	printf("start rtp send (%d)\n", phone->remote_rtp_port);
 
 	session = rtp_session_new(RTP_SESSION_SENDONLY);
-	//printf("session %s\n", session);
 
 	rtp_session_set_scheduling_mode(session, 1);
 	rtp_session_set_blocking_mode(session, 1);
@@ -213,45 +211,46 @@ void *start_rtp_send(void *data)
 	ret = rtp_session_set_remote_addr(session, phone->remote_ip, phone->remote_rtp_port);
 	printf("ret %d::%d\n", ret, __LINE__);
 	if (ret == -1) {
-		goto clean;
+		goto end;
 	}
 
 	ret = rtp_session_set_payload_type(session, 0);
 	printf("ret %d::%d\n", ret, __LINE__);
 	if (ret == -1) {
-		goto clean;
+		goto end;
 	}
 
+	printf("phone->headset %d\n", phone->headset);
 
-	infile=fopen("./music.raw","r");
-	//outfile=open("./zoo.raw", O_WRONLY);
+	if (phone->headset)
+		init_mic();
+	else
+		infile=fopen("./music.raw","r");
 
-	//init_mic();
-	//printf("size %d\n", size);
-	//char buffer2[160];
+	if (infile == NULL)
+		goto end;
 
 	while (phone->rtp_send) {
 
-		//i = read_mic(buffer2);
-
-		//printf("%i-", i);
-		//write(outfile, buffer2, i);
-	        i = fread(buffer, 1, 160, infile);
+		if (phone->headset)
+			i = read_mic((char *)buffer);
+		else
+			i = fread(buffer, 1, 160, infile);
 
 		ret = rtp_session_send_with_ts(session, buffer, i, user_ts);
-		if (!(ret>0))
+		if (!(ret > 0))
 			printf("ret %d\n", ret);
 
 		user_ts+=i;
 	}
 
-	fclose(infile);
-	//close_mic();
-clean:
+	if (phone->headset)
+		close_mic();
+	else
+		fclose(infile);
+end:
 	rtp_session_destroy(session);
 	ortp_global_stats_display();
-
-	printf("stop rtp send\n");
 
 	return NULL;
 }

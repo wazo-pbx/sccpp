@@ -16,7 +16,8 @@ void print_help()
 	"sccpp [scenario] [options]\n\n"
 	"[scenarios]\n"
 	" -p\t softphone\n"
-	" -m\t mass call\n"
+	" -c\t mass call\n"
+	" -a\t answer call\n"
 	"\n"
 	"[options]\n"
 	" -i\t local ip\n"
@@ -24,11 +25,13 @@ void print_help()
 	" -e\t extension to call\n"
 	" -t\t number of thread\n"
 	" -d\t call delay\n"
+	" -s\t headset\n"
+	" -m\t mac address\n"
 	"\n"
 	"Example:\n\n"
-	"Launch 100 virtual phones, from 10.97.8.1 to 10.97.8.9\n"
-	"that will call the queue extension 3000 for 10sec every 5sec in loop:\n\n"
-	"./sccpp -m -i 10.97.8.1 -o 10.97.8.9 -e 3000 -t 100 -d 10\n\n");
+	"Launch 20 virtual phones, from 10.97.8.1 to 10.97.8.9,\n"
+	"that will call the queue extension 3000 for 10sec (then wait 5sec) in loop:\n\n"
+	"./sccpp -c -i 10.97.8.1 -o 10.97.8.9 -e 3000 -t 20 -d 10\n\n");
 }
 
 int main(int argc, char *argv[])
@@ -36,29 +39,32 @@ int main(int argc, char *argv[])
 	int scen_stress = 0;
 	int scen_softphone = 0;
 	int scen_mass_call = 0;
+	int scen_answer_call = 0;
 
 	char exten[15] = "";
+	char macaddr[16] = "";
 	char remote_ip[16] = "127.0.0.1";	/* Default SCCP server IP */
 	char local_ip[16] = "";
 	int duration = 5;
 	int thread = 1;
+	char headset = 0;
 
 	int opt = 0;
 	int ret = 0;
 
-	while ((opt = getopt(argc, argv, "hsmpe:t:o:i:d:")) != -1) {
+	while ((opt = getopt(argc, argv, "hscapm:e:t:o:i:d:")) != -1) {
 		switch (opt) {
 		case 'h':
 			print_help();
 			exit(EXIT_FAILURE);
-		case 's':
-			scen_stress = 1;
-			break;
 		case 'p':
 			scen_softphone = 1;
 			break;
-		case 'm':
+		case 'c':
 			scen_mass_call = 1;
+			break;
+		case 'a':
+			scen_answer_call = 1;
 			break;
 		case 'e':
 			strcpy(exten, optarg);
@@ -75,10 +81,17 @@ int main(int argc, char *argv[])
 		case 'd':
 			duration = atoi(optarg);
 			break;
+		case 'm':
+			strcpy(macaddr, optarg);
+			break;
+		case 's':
+			headset = 1;
+			break;
+		break;
 		}
 	}
 
-	if (!(scen_stress ^ scen_softphone ^ scen_mass_call)) {
+	if (!(scen_softphone ^ scen_mass_call ^ scen_answer_call)) {
 		print_help();
 		exit(EXIT_FAILURE);
 	}
@@ -92,12 +105,17 @@ int main(int argc, char *argv[])
 
 	if (scen_softphone) {
 		printf("scenario softphone...\n");
-		ret = sccpp_scen_softphone(local_ip, remote_ip, SCCP_PORT, exten, duration);
+		ret = sccpp_scen_softphone(local_ip, remote_ip, SCCP_PORT, exten, duration, headset, macaddr);
 	}
 
 	if (scen_mass_call) {
 		printf("scenario mass call...\n");
 		ret = sccpp_scen_mass_call(local_ip, remote_ip, SCCP_PORT, thread, exten, duration);
+	}
+
+	if (scen_answer_call) {
+		printf("scenario answer call...\n");
+		ret = sccpp_scen_answer_call(local_ip, remote_ip, SCCP_PORT, thread, duration, headset, macaddr);
 	}
 
 	return ret;

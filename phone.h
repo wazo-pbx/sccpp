@@ -37,6 +37,8 @@ struct phone {
 	uint32_t remote_rtp_port;
 	uint32_t local_rtp_port;
 
+	char headset;
+
 	uint8_t rtp_send;
 	uint8_t rtp_recv;
 
@@ -61,6 +63,7 @@ void do_dial_extension(struct phone *phone, char *exten);
 int phone_register(struct phone *phone);
 void *phone_handler(void *data);
 void *phone_handler_connect(void *data);
+void *phone_handler_answer(void *data);
 struct sccp_session *session_new(char *ip, char *port);
 
 #endif /* SCCP_PHONE_H_ */
