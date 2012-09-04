@@ -116,6 +116,7 @@ int sccpp_scen_softphone(char *local_ip, char *remote_ip, char *remote_port, cha
 
 int sccpp_scen_answer_call(char *local_ip, char *remote_ip, char *remote_port, int thread, int duration, char headset, char *macaddr)
 {
+#if 0
 	struct phone *c7940 = NULL;
 	pthread_t thread_answer;
 
@@ -134,9 +135,8 @@ int sccpp_scen_answer_call(char *local_ip, char *remote_ip, char *remote_port, i
 	pthread_join(thread_answer, NULL);
 
 	return 0;
+#endif
 
-
-#if 0
 	struct phone *c7940 = NULL;
 
 	uint32_t userId = 0;
@@ -169,7 +169,7 @@ int sccpp_scen_answer_call(char *local_ip, char *remote_ip, char *remote_port, i
 
 	do {
 		ret = getline(&mac, &linesz, f);
-		if (ret > 0) {
+		if (ret > 0 && i % 2 == 0) {
 			line = strchr(mac, ',');
 			if (line != NULL) {
 				*line = '\0';
@@ -201,7 +201,6 @@ end:
 	free(mac);
 
 	return 0;
-#endif
 }
 
 int sccpp_scen_mass_call(char *local_ip, char *remote_ip, char *remote_port, int thread, char *exten, int duration)
@@ -238,7 +237,7 @@ int sccpp_scen_mass_call(char *local_ip, char *remote_ip, char *remote_port, int
 
 	do {
 		ret = getline(&mac, &linesz, f);
-		if (ret > 0) {
+		if (ret > 0 && i % 2 != 0) {
 			line = strchr(mac, ',');
 			if (line != NULL) {
 				*line = '\0';
@@ -247,6 +246,8 @@ int sccpp_scen_mass_call(char *local_ip, char *remote_ip, char *remote_port, int
 
 			c7940 = phone_new(mac, userId, instance, local_ip, remote_ip, type,
 					maxStreams, activeStreams, protoVersion, exten, duration);
+
+			sprintf(c7940->exten, "%d\0", atoi(exten)+i-1);
 
 			c7940->session = session_new(remote_ip, remote_port);
 			if (c7940->session == NULL)
