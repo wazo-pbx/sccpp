@@ -31,6 +31,7 @@ void *start_rtp_recv(void *data)
 
 	phone = (struct phone *)data;
 	printf("phone->headset %d\n", phone->headset);
+	printf("local rtp port %d\n", phone->local_rtp_port);
 
 	session = rtp_session_new(RTP_SESSION_RECVONLY);
 
@@ -93,10 +94,9 @@ void *start_rtp_recv(void *data)
 	rtp_session_destroy(session);
 	ortp_global_stats_display();
 
-
 	printf("stop rtp recv\n");
 
-    return NULL;
+	return NULL;
 }
 
 /* Use the newer ALSA API */
@@ -201,14 +201,19 @@ void *start_rtp_send(void *data)
 	struct phone *phone;
 	phone = (struct phone *)data;
 
-	printf("start rtp send (%d)\n", phone->remote_rtp_port);
+
+	struct sockaddr_in remote = {0};
+	remote.sin_family = AF_INET;
+	remote.sin_addr.s_addr = phone->remote_rtp_ip;
+
+	printf("start rtp send (%s::%d)\n", inet_ntoa(remote.sin_addr), phone->remote_rtp_port);
 
 	session = rtp_session_new(RTP_SESSION_SENDONLY);
 
 	rtp_session_set_scheduling_mode(session, 1);
 	rtp_session_set_blocking_mode(session, 1);
 	rtp_session_set_connected_mode(session, TRUE);
-	ret = rtp_session_set_remote_addr(session, phone->remote_ip, phone->remote_rtp_port);
+	ret = rtp_session_set_remote_addr(session, inet_ntoa(remote.sin_addr), phone->remote_rtp_port);
 	printf("ret %d::%d\n", ret, __LINE__);
 	if (ret == -1) {
 		goto end;
@@ -224,11 +229,11 @@ void *start_rtp_send(void *data)
 
 	if (phone->headset)
 		init_mic();
-	else
+	else {
 		infile=fopen("./music.raw","r");
-
-	if (infile == NULL)
-		goto end;
+		if (infile == NULL)
+			goto end;
+	}
 
 	while (phone->rtp_send) {
 
@@ -249,8 +254,11 @@ void *start_rtp_send(void *data)
 	else
 		fclose(infile);
 end:
+
 	rtp_session_destroy(session);
 	ortp_global_stats_display();
+
+	printf("end RTP send\n");
 
 	return NULL;
 }

@@ -34,6 +34,7 @@ struct phone {
 	char *remote_ip;
 	char *local_ip;
 
+	uint32_t remote_rtp_ip;
 	uint32_t remote_rtp_port;
 	uint32_t local_rtp_port;
 

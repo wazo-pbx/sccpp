@@ -203,7 +203,7 @@ end:
 	return 0;
 }
 
-int sccpp_scen_mass_call(char *local_ip, char *remote_ip, char *remote_port, int thread, char *exten, int duration)
+int sccpp_scen_mass_call(char *local_ip, char *remote_ip, char *remote_port, int thread, char *exten, int duration, char range)
 {
 	struct phone *c7940 = NULL;
 
@@ -247,7 +247,8 @@ int sccpp_scen_mass_call(char *local_ip, char *remote_ip, char *remote_port, int
 			c7940 = phone_new(mac, userId, instance, local_ip, remote_ip, type,
 					maxStreams, activeStreams, protoVersion, exten, duration);
 
-			sprintf(c7940->exten, "%d\0", atoi(exten)+i-1);
+			if (range)
+				sprintf(c7940->exten, "%d", atoi(exten)+i-1);
 
 			c7940->session = session_new(remote_ip, remote_port);
 			if (c7940->session == NULL)

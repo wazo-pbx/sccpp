@@ -60,6 +60,7 @@ int handle_start_media_transmission_message(struct sccp_msg *msg, struct phone *
 	fprintf(stdout, "%s\n", __func__);
 
 	phone->remote_rtp_port = letohl(msg->data.startmedia.remotePort);
+	phone->remote_rtp_ip = msg->data.startmedia.remoteIp;
 
 	printf("phone->remote_rtp_port %d\n", phone->remote_rtp_port);
 	phone->rtp_send = 1;
@@ -80,7 +81,7 @@ int handle_start_media_transmission_message(struct sccp_msg *msg, struct phone *
 int handle_close_receive_channel_message(struct sccp_msg *msg, struct phone *phone)
 {
 	fprintf(stdout, "%s\n", __func__);
-	//phone->rtp_recv = 0;
+	phone->rtp_recv = 0;
 	return 0;
 }
 

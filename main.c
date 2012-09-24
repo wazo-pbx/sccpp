@@ -27,6 +27,7 @@ void print_help()
 	" -d\t call delay\n"
 	" -s\t headset\n"
 	" -m\t mac address\n"
+	" -r\t range call (extension+N-1)"
 	"\n"
 	"Example:\n\n"
 	"Launch 20 virtual phones, from 10.97.8.1 to 10.97.8.9,\n"
@@ -48,11 +49,12 @@ int main(int argc, char *argv[])
 	int duration = 5;
 	int thread = 1;
 	char headset = 0;
+	char range = 0;
 
 	int opt = 0;
 	int ret = 0;
 
-	while ((opt = getopt(argc, argv, "hscapm:e:t:o:i:d:")) != -1) {
+	while ((opt = getopt(argc, argv, "hsrcapm:e:t:o:i:d:")) != -1) {
 		switch (opt) {
 		case 'h':
 			print_help();
@@ -87,6 +89,9 @@ int main(int argc, char *argv[])
 		case 's':
 			headset = 1;
 			break;
+		case 'r':
+			range = 1;
+			break;
 		break;
 		}
 	}
@@ -110,7 +115,7 @@ int main(int argc, char *argv[])
 
 	if (scen_mass_call) {
 		printf("scenario mass call...\n");
-		ret = sccpp_scen_mass_call(local_ip, remote_ip, SCCP_PORT, thread, exten, duration);
+		ret = sccpp_scen_mass_call(local_ip, remote_ip, SCCP_PORT, thread, exten, duration, range);
 	}
 
 	if (scen_answer_call) {

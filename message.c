@@ -249,6 +249,12 @@ int transmit_open_receive_channel_ack_message(struct phone *phone)
 
 	static int port = 1000;
 
+	srand(time(NULL));
+	port = 1000 + (rand() % 2000);
+
+	printf("port: %d\n", port);
+
+
 	msg = msg_alloc(sizeof(struct open_receive_channel_ack_message), OPEN_RECEIVE_CHANNEL_ACK_MESSAGE);
 	if (msg == NULL)
 		return -1;
@@ -265,7 +271,7 @@ int transmit_open_receive_channel_ack_message(struct phone *phone)
 	if (ret == -1)
 		return -1;
 
-	phone->local_rtp_port = port++;
+	phone->local_rtp_port = port;
 	phone->rtp_recv = 1;
 
 	pthread_attr_t attr;
