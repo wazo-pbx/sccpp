@@ -25,8 +25,6 @@ int handle_register_ack_message(struct sccp_msg *msg, struct phone *phone)
 	phone->dateTemplate = strdup(msg->data.regack.dateTemplate);
 	phone->secondaryKeepAlive = letohl(msg->data.regack.secondaryKeepAlive);
 
-	phone->auth = 1;
-
 	return 0;
 }
 
@@ -39,6 +37,7 @@ int handle_forward_status_res_message(struct sccp_msg *msg, struct phone *phone)
 int handle_date_time_res_message(struct sccp_msg *msg, struct phone *phone)
 {
 	fprintf(stdout, "%s\n", __func__);
+	phone->auth = 1;
 	return 0;
 }
 
@@ -422,8 +421,11 @@ void *phone_handler_connect(void *data)
 			time(&start);
 		}
 
+		printf("phone->auth: %d\n", phone->auth);
+
 		if (phone->auth && toggle) {
 
+			sleep(2);
 			transmit_offhook_message(phone);
 			sleep(2);
 			do_dial_extension(phone, phone->exten);
