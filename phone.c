@@ -88,7 +88,8 @@ int handle_call_state_message(struct sccp_msg *msg, struct phone *phone)
 {
 	fprintf(stdout, "%s\n", __func__);
 	printf("callstate: %d\n", msg->data.callstate.callState);
-	transmit_offhook_message(phone);
+	if (msg->data.callstate.callState == 4)
+		transmit_offhook_message(phone);
 	return 0;
 }
 
