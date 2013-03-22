@@ -18,6 +18,7 @@ void print_help()
 	" -p\t softphone\n"
 	" -c\t mass call\n"
 	" -a\t answer call\n"
+	" -C\t connect and exit (with return code)\n"
 	"\n"
 	"[options]\n"
 	" -i\t local ip\n"
@@ -41,6 +42,7 @@ int main(int argc, char *argv[])
 	int scen_softphone = 0;
 	int scen_mass_call = 0;
 	int scen_answer_call = 0;
+	int scen_connect_exit = 0;
 
 	char exten[15] = "";
 	char macaddr[16] = "";
@@ -54,7 +56,7 @@ int main(int argc, char *argv[])
 	int opt = 0;
 	int ret = 0;
 
-	while ((opt = getopt(argc, argv, "hsrcapm:e:t:o:i:d:")) != -1) {
+	while ((opt = getopt(argc, argv, "Chsrcapm:e:t:o:i:d:")) != -1) {
 		switch (opt) {
 		case 'h':
 			print_help();
@@ -67,6 +69,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'a':
 			scen_answer_call = 1;
+			break;
+		case 'C':
+			scen_connect_exit = 1;
 			break;
 		case 'e':
 			strcpy(exten, optarg);
@@ -96,7 +101,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (!(scen_softphone ^ scen_mass_call ^ scen_answer_call)) {
+	if (!(scen_softphone ^ scen_mass_call ^ scen_answer_call ^ scen_connect_exit)) {
 		print_help();
 		exit(EXIT_FAILURE);
 	}
@@ -121,6 +126,11 @@ int main(int argc, char *argv[])
 	if (scen_answer_call) {
 		printf("scenario answer call...\n");
 		ret = sccpp_scen_answer_call(local_ip, remote_ip, SCCP_PORT, thread, duration, headset, macaddr);
+	}
+
+	if (scen_connect_exit) {
+		printf("connect and exit...\n");
+		ret = sccpp_scen_connect_exit(remote_ip, SCCP_PORT);
 	}
 
 	return ret;

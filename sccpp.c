@@ -49,6 +49,18 @@ void *caller(void *data)
 	free(exten);
 }
 
+int sccpp_scen_connect_exit(char *remote_ip, char *remote_port)
+{
+	struct sccp_session *session = NULL;
+	session = session_new(remote_ip, remote_port);
+	if (session == NULL) {
+		fprintf(stdout, "can't connect to %s:%s\n", remote_ip, remote_port);
+		exit(1);
+	}
+
+	exit(0);
+}
+
 int sccpp_scen_stress(char *local_ip, char *remote_ip, char *remote_port, char *exten, int duration)
 {
 	/**** PHONE 1 */

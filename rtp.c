@@ -56,7 +56,7 @@ void *start_rtp_recv(void *data)
 	unsigned char buffer[160];
 	uint32_t ts = 0;
 
-	int sound_fd;
+	int sound_fd = -1;
 
 	if (phone->headset) {
 		/* XXX use asound instead... */
