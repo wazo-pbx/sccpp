@@ -10,6 +10,7 @@ sccpp [scenario] [options]
  -p	 softphone
  -c	 mass call
  -a	 answer call
+ -C	 connect and exit (with return code)
 
 [options]
  -i	 local ip
