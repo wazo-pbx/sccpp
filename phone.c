@@ -394,6 +394,11 @@ void do_dial_extension(struct phone *phone, char *exten)
 void send_keepalive_if_required(struct phone *phone, time_t *last)
 {
 	time_t now;
+
+	if (!phone->send_keepalive) {
+		return;
+	}
+
 	time(&now);
 
 	if (now > *last + 5) {
@@ -557,6 +562,7 @@ struct phone *phone_new(char name[16],
 	phone->protoVersion = protoVersion;
 
 	phone->call_duration = duration;
+	phone->send_keepalive = 1;
 
 	strcpy(phone->exten, exten);
 

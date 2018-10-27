@@ -46,6 +46,7 @@ struct phone {
 	int call_duration;
 
 	uint8_t auth;
+	uint8_t send_keepalive;
 };
 
 struct phone *phone_new(char name[16],

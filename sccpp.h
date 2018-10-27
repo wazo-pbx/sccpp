@@ -1,6 +1,7 @@
 #ifndef SCCPP_H
 #define SCCPP_H
 
+int sccpp_scen_register_and_timeout(char *local_ip, char *remote_ip, char *remote_port, char *macaddr);
 int sccpp_scen_connect_exit(char *remote_ip, char *remote_port);
 int sccpp_scen_stress(char *local_ip, char *remote_ip, char *remote_port, char *exten, int duration);
 int sccpp_scen_softphone(char *local_ip, char *remote_ip, char *remote_port, char *exten, int duration, char headset, char *macaddr);

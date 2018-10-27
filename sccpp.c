@@ -61,6 +61,27 @@ int sccpp_scen_connect_exit(char *remote_ip, char *remote_port)
 	exit(0);
 }
 
+int sccpp_scen_register_and_timeout(char *local_ip, char *remote_ip, char *remote_port, char *macaddr)
+{
+	struct phone *c7940 = NULL;
+	c7940 = phone_new(macaddr, 0, 1, local_ip, remote_ip, SCCP_DEVICE_7940, 0, 0, 0, "1001", 0);
+	c7940->session = session_new(remote_ip, remote_port);
+	c7940->send_keepalive = 0;
+
+	if (c7940->session == NULL) {
+		fprintf(stdout, "can't create a new session\n");
+		return -1;
+	}
+
+	pthread_t thread_register;
+	pthread_create(&thread_register, NULL, phone_handler_answer, c7940);
+	phone_register(c7940);
+
+	pthread_join(thread_register, NULL);
+
+	return 0;
+}
+
 int sccpp_scen_stress(char *local_ip, char *remote_ip, char *remote_port, char *exten, int duration)
 {
 	/**** PHONE 1 */
