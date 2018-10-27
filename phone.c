@@ -391,6 +391,17 @@ void do_dial_extension(struct phone *phone, char *exten)
 	}
 }
 
+void send_keepalive_if_required(struct phone *phone, time_t *last)
+{
+	time_t now;
+	time(&now);
+
+	if (now > *last + 5) {
+		transmit_keep_alive_message(phone);
+		time(last);
+	}
+}
+
 void *phone_handler_connect(void *data)
 {
 	struct phone *phone = data;
@@ -399,7 +410,7 @@ void *phone_handler_connect(void *data)
 	int ret = 0;
 	int toggle = 1;
 
-	time_t start, now;
+	time_t start;
 	time(&start);
 
 	while (connected) {
@@ -415,12 +426,7 @@ void *phone_handler_connect(void *data)
 			connected = 0;
 		}
 
-		time(&now);
-
-		if (now > start + 5) {
-			transmit_keep_alive_message(phone);
-			time(&start);
-		}
+		send_keepalive_if_required(phone, &start);
 
 		printf("phone->auth: %d\n", phone->auth);
 
@@ -445,7 +451,6 @@ void *phone_handler_answer(void *data)
 	int ret = 0;
 
 	time_t start_keepalive, start_breath;
-	time_t now;
 
 	time(&start_keepalive);
 	time(&start_breath);
@@ -463,12 +468,7 @@ void *phone_handler_answer(void *data)
 			connected = 0;
 		}
 
-		time(&now);
-
-		if (now > start_keepalive + 5) {
-			transmit_keep_alive_message(phone);
-			time(&start_keepalive);
-		}
+		send_keepalive_if_required(phone, &start_keepalive);
 	}
 
 	return NULL;
@@ -503,13 +503,9 @@ void *phone_handler(void *data)
 			connected = 0;
 		}
 
+		send_keepalive_if_required(phone, &start_keepalive);
+
 		time(&now);
-
-		if (now > start_keepalive + 5) {
-			transmit_keep_alive_message(phone);
-			time(&start_keepalive);
-		}
-
 		if (toggle == 1 && now > start_breath + 5) {
 
 			transmit_offhook_message(phone);
