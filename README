@@ -1,4 +1,3 @@
-
 SCCP profiler
 --------------+
 
@@ -47,3 +46,10 @@ mass call:	spawn N thread (-t N) and call the extension.
 answer call:	spawn N thread (-t N) and answer incoming call.
 
 			./sccpp -a -i 10.97.8.1 -o 10.97.8.9 -t 100
+
+
+Dependencies
+------------
+
+- libortp-dev
+- libasound2-dev
