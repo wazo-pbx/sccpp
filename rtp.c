@@ -37,7 +37,7 @@ void *start_rtp_recv(void *data)
 
 	rtp_session_set_scheduling_mode(session, 1);
 	rtp_session_set_blocking_mode(session, 1);
-	ret = rtp_session_set_local_addr(session, phone->local_ip, phone->local_rtp_port);
+	ret = rtp_session_set_local_addr(session, phone->local_ip, phone->local_rtp_port, -1);
 	printf("ret %d::%d\n", ret, __LINE__);
 	rtp_session_set_connected_mode(session, 1);
 	rtp_session_set_symmetric_rtp(session, 1);
