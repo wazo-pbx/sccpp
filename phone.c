@@ -307,7 +307,7 @@ static int fetch_data(struct sccp_session *session)
 			return -1;
 
 		} else if (nbyte < 4) {
-			fprintf(stdout, "Client sent less data than expected. Expected at least 4 bytes but got %d\n", nbyte);
+			fprintf(stdout, "Client sent less data than expected. Expected at least 4 bytes but got %ld\n", nbyte);
 			return -1;
 		}
 
